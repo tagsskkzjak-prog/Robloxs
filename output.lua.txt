@@ -1,6 +1,6 @@
 local Settings = {
-    ESP     = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
-    Sdamage = { Enabled = false, Amount = 100 },
+    ESP  = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
+    Aim  = { SilentAim = false, HitboxExpander = false, HitboxSize = 10 },
     CurrentTab = "ESP"
 }
 
@@ -31,20 +31,40 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
-task.spawn(function()
-    while true do
-        task.wait(0.05)
-        if Settings.Sdamage.Enabled then
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character then
-                    local hum  = player.Character:FindFirstChild("Humanoid")
-                    local root = player.Character:FindFirstChild("HumanoidRootPart")
-                    if hum and root and hum.Health > 0 then
-                        local _, onScreen = Camera:WorldToViewportPoint(root.Position)
-                        if onScreen then
-                            hum:TakeDamage(Settings.Sdamage.Amount)
-                        end
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, key)
+    if Settings.Aim.SilentAim and typeof(self) == "Instance" and self:IsA("Mouse") and key == "Hit" then
+        local best, bestDist = nil, math.huge
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local root = p.Character:FindFirstChild("HumanoidRootPart")
+                local hum  = p.Character:FindFirstChild("Humanoid")
+                if root and hum and hum.Health > 0 then
+                    local sp, onScreen = Camera:WorldToViewportPoint(root.Position)
+                    if onScreen then
+                        local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                        if d < bestDist then bestDist = d; best = root end
                     end
+                end
+            end
+        end
+        if best then return best.CFrame end
+    end
+    return oldIndex(self, key)
+end)
+
+RunService.RenderStepped:Connect(function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local root = p.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                if Settings.Aim.HitboxExpander then
+                    local sz = Settings.Aim.HitboxSize
+                    root.Size        = Vector3.new(sz, sz, sz)
+                    root.Transparency = 0.85
+                else
+                    root.Size        = Vector3.new(2, 2, 1)
+                    root.Transparency = 1
                 end
             end
         end
@@ -482,9 +502,9 @@ local function CreatePage(tabName)
     return page, layout
 end
 
-local EspPage,     EspLayout     = CreatePage("ESP")
-local SdamagePage, SdamageLayout = CreatePage("SDAMAGE")
-local SpyPage,     SpyLayout     = CreatePage("SPY")
+local EspPage,  EspLayout  = CreatePage("ESP")
+local AimPage,  AimLayout  = CreatePage("AIM")
+local SpyPage,  SpyLayout  = CreatePage("SPY")
 
 SpyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
 SpyLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -528,9 +548,9 @@ local function AddTabButton(name, label)
     TabButtons[name] = btn
 end
 
-AddTabButton("ESP",     "  ESP")
-AddTabButton("SDAMAGE", "  SDAMAGE")
-AddTabButton("SPY",     "  REMOTE EVENT")
+AddTabButton("ESP", "  ESP")
+AddTabButton("AIM", "  AIM")
+AddTabButton("SPY", "  REMOTE EVENT")
 
 local function AddToggle(page, name, target, key)
     local Frame = Instance.new("Frame", page)
@@ -708,8 +728,9 @@ AddToggle(EspPage,   "NAME TAG",     Settings.ESP, "Name")
 AddToggle(EspPage,   "HEALTH BAR",   Settings.ESP, "Health")
 AddSlider(EspPage,   "THICKNESS",    0.5, 3, Settings.ESP, "Thickness")
 
-AddToggle(SdamagePage, "ENABLE SDAMAGE", Settings.Sdamage, "Enabled")
-AddSlider(SdamagePage, "DAMAGE",         1, 999, Settings.Sdamage, "Amount")
+AddToggle(AimPage,  "SILENT AIM",      Settings.Aim, "SilentAim")
+AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander")
+AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize")
 
 local SpyHeaderRow = Instance.new("Frame", SpyPage)
 SpyHeaderRow.Size             = UDim2.new(1, -6, 0, 34)
