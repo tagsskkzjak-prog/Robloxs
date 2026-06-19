@@ -42,7 +42,7 @@ task.spawn(function()
                     if hum and root and hum.Health > 0 then
                         local _, onScreen = Camera:WorldToViewportPoint(root.Position)
                         if onScreen then
-                            hum.Health = 0
+                            hum:TakeDamage(Settings.Sdamage.Amount)
                         end
                     end
                 end
@@ -51,7 +51,14 @@ task.spawn(function()
     end
 end)
 
+local espConnections = {}
+
 local function CreateFullESP(player)
+    if espConnections[player] then
+        espConnections[player]:Disconnect()
+        espConnections[player] = nil
+    end
+
     local esp = {
         box       = Drawing.new("Square"),
         line      = Drawing.new("Line"),
@@ -82,124 +89,178 @@ local function CreateFullESP(player)
         line.Visible = false
     end
 
-    local function Update()
-        local char = player.Character
-        local hum  = char and char:FindFirstChild("Humanoid")
-        if not char or not char:FindFirstChild("HumanoidRootPart") or not hum then
-            for _, v in pairs(esp)   do v.Visible = false end
-            for i = 1, #limbs do limbs[i].Visible = false end
-            return
-        end
-
-        local root              = char.HumanoidRootPart
-        local pos, onScreen     = Camera:WorldToViewportPoint(root.Position)
-        local distance          = (Camera.CFrame.Position - root.Position).Magnitude
-
-        if onScreen and Settings.ESP.Enabled then
-            local sizeX = math.clamp(1000 / distance, 10, 150)
-            local sizeY = sizeX * 1.6
-
-            if Settings.ESP.Box then
-                esp.box.Visible   = true
-                esp.box.Size      = Vector2.new(sizeX, sizeY)
-                esp.box.Position  = Vector2.new(pos.X - sizeX/2, pos.Y - sizeY/2)
-                esp.box.Color     = currentAutoColor
-                esp.box.Thickness = 0.5
-            else esp.box.Visible = false end
-
-            if Settings.ESP.Line then
-                esp.line.Visible = true
-                if Settings.ESP.LinePos == "CENTER" then
-                    esp.line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-                elseif Settings.ESP.LinePos == "BOTTOM" then
-                    esp.line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                else
-                    esp.line.From = Vector2.new(Camera.ViewportSize.X/2, 0)
-                end
-                esp.line.To           = Vector2.new(pos.X, pos.Y - sizeY/2)
-                esp.line.Color        = currentAutoColor
-                esp.line.Thickness    = 0.5
-                esp.line.Transparency = math.clamp(1 - (distance/1200), 0.35, 0.95)
-            else esp.line.Visible = false end
-
-            if Settings.ESP.Health then
-                local hp = hum.Health / hum.MaxHealth
-                esp.healthBar.Visible = true
-                esp.healthBar.From  = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2)
-                esp.healthBar.To    = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2 - sizeY * math.clamp(hp, 0, 1))
-                esp.healthBar.Color = Color3.fromRGB(math.floor(255 - 255*hp), math.floor(255*hp), 0)
-            else esp.healthBar.Visible = false end
-
-            if Settings.ESP.Name then
-                esp.name.Visible  = true
-                esp.name.Text     = player.Name .. " [" .. math.floor(distance) .. "m]"
-                esp.name.Position = Vector2.new(pos.X, pos.Y - sizeY/2 - 16)
-                esp.name.Color    = currentAutoColor
-            else esp.name.Visible = false end
-        else
-            esp.box.Visible       = false
-            esp.line.Visible      = false
-            esp.healthBar.Visible = false
-            esp.name.Visible      = false
-        end
-
-        local isR15 = char:FindFirstChild("UpperTorso") ~= nil
-        local bones = {}
-        if isR15 then
-            local head   = char:FindFirstChild("Head")
-            local uTorso = char:FindFirstChild("UpperTorso")
-            local lTorso = char:FindFirstChild("LowerTorso")
-            local lUA    = char:FindFirstChild("LeftUpperArm")
-            local lLA    = char:FindFirstChild("LeftLowerArm")
-            local lHand  = char:FindFirstChild("LeftHand")
-            local rUA    = char:FindFirstChild("RightUpperArm")
-            local rLA    = char:FindFirstChild("RightLowerArm")
-            local rHand  = char:FindFirstChild("RightHand")
-            local lUL    = char:FindFirstChild("LeftUpperLeg")
-            local lLL    = char:FindFirstChild("LeftLowerLeg")
-            local lFoot  = char:FindFirstChild("LeftFoot")
-            local rUL    = char:FindFirstChild("RightUpperLeg")
-            local rLL    = char:FindFirstChild("RightLowerLeg")
-            local rFoot  = char:FindFirstChild("RightFoot")
-            bones = {
-                {head,   uTorso}, {uTorso, lTorso},
-                {uTorso, lUA},    {lUA,    lLA},    {lLA, lHand},
-                {uTorso, rUA},    {rUA,    rLA},    {rLA, rHand},
-                {lTorso, lUL},    {lUL,    lLL},    {lLL, lFoot},
-                {lTorso, rUL},    {rUL,    rLL},    {rLL, rFoot},
-            }
-        else
-            local head  = char:FindFirstChild("Head")
-            local torso = char:FindFirstChild("Torso")
-            local lArm  = char:FindFirstChild("Left Arm")
-            local rArm  = char:FindFirstChild("Right Arm")
-            local lLeg  = char:FindFirstChild("Left Leg")
-            local rLeg  = char:FindFirstChild("Right Leg")
-            bones = {
-                {head,  torso},
-                {torso, lArm}, {torso, rArm},
-                {torso, lLeg}, {torso, rLeg},
-            }
-        end
-        for i = 1, #limbs do
-            drawBone(limbs[i], bones[i] and bones[i][1], bones[i] and bones[i][2])
-        end
+    local function HideAll()
+        for _, v in pairs(esp) do pcall(function() v.Visible = false end) end
+        for i = 1, #limbs do pcall(function() limbs[i].Visible = false end) end
     end
-    RunService.RenderStepped:Connect(Update)
+
+    local function Update()
+        local ok, err = pcall(function()
+            local char = player.Character
+            local hum  = char and char:FindFirstChild("Humanoid")
+            if not char or not char:FindFirstChild("HumanoidRootPart") or not hum then
+                HideAll()
+                return
+            end
+
+            local root          = char.HumanoidRootPart
+            local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
+            local distance      = (Camera.CFrame.Position - root.Position).Magnitude
+
+            if onScreen and Settings.ESP.Enabled then
+                local sizeX = math.clamp(1000 / distance, 10, 150)
+                local sizeY = sizeX * 1.6
+
+                if Settings.ESP.Box then
+                    esp.box.Visible   = true
+                    esp.box.Size      = Vector2.new(sizeX, sizeY)
+                    esp.box.Position  = Vector2.new(pos.X - sizeX/2, pos.Y - sizeY/2)
+                    esp.box.Color     = currentAutoColor
+                    esp.box.Thickness = 0.5
+                else esp.box.Visible = false end
+
+                if Settings.ESP.Line then
+                    esp.line.Visible = true
+                    if Settings.ESP.LinePos == "CENTER" then
+                        esp.line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+                    elseif Settings.ESP.LinePos == "BOTTOM" then
+                        esp.line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                    else
+                        esp.line.From = Vector2.new(Camera.ViewportSize.X/2, 0)
+                    end
+                    esp.line.To           = Vector2.new(pos.X, pos.Y - sizeY/2)
+                    esp.line.Color        = currentAutoColor
+                    esp.line.Thickness    = 0.5
+                    esp.line.Transparency = math.clamp(1 - (distance/1200), 0.35, 0.95)
+                else esp.line.Visible = false end
+
+                if Settings.ESP.Health then
+                    local hp = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
+                    esp.healthBar.Visible = true
+                    esp.healthBar.From  = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2)
+                    esp.healthBar.To    = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2 - sizeY * hp)
+                    esp.healthBar.Color = Color3.fromRGB(math.floor(255 - 255*hp), math.floor(255*hp), 0)
+                else esp.healthBar.Visible = false end
+
+                if Settings.ESP.Name then
+                    esp.name.Visible  = true
+                    esp.name.Text     = player.Name .. " [" .. math.floor(distance) .. "m]"
+                    esp.name.Position = Vector2.new(pos.X, pos.Y - sizeY/2 - 16)
+                    esp.name.Color    = currentAutoColor
+                else esp.name.Visible = false end
+            else
+                esp.box.Visible       = false
+                esp.line.Visible      = false
+                esp.healthBar.Visible = false
+                esp.name.Visible      = false
+            end
+
+            local isR15 = char:FindFirstChild("UpperTorso") ~= nil
+            local bones = {}
+            if isR15 then
+                local head   = char:FindFirstChild("Head")
+                local uTorso = char:FindFirstChild("UpperTorso")
+                local lTorso = char:FindFirstChild("LowerTorso")
+                local lUA    = char:FindFirstChild("LeftUpperArm")
+                local lLA    = char:FindFirstChild("LeftLowerArm")
+                local lHand  = char:FindFirstChild("LeftHand")
+                local rUA    = char:FindFirstChild("RightUpperArm")
+                local rLA    = char:FindFirstChild("RightLowerArm")
+                local rHand  = char:FindFirstChild("RightHand")
+                local lUL    = char:FindFirstChild("LeftUpperLeg")
+                local lLL    = char:FindFirstChild("LeftLowerLeg")
+                local lFoot  = char:FindFirstChild("LeftFoot")
+                local rUL    = char:FindFirstChild("RightUpperLeg")
+                local rLL    = char:FindFirstChild("RightLowerLeg")
+                local rFoot  = char:FindFirstChild("RightFoot")
+                bones = {
+                    {head,   uTorso}, {uTorso, lTorso},
+                    {uTorso, lUA},    {lUA,    lLA},    {lLA, lHand},
+                    {uTorso, rUA},    {rUA,    rLA},    {rLA, rHand},
+                    {lTorso, lUL},    {lUL,    lLL},    {lLL, lFoot},
+                    {lTorso, rUL},    {rUL,    rLL},    {rLL, rFoot},
+                }
+            else
+                local head  = char:FindFirstChild("Head")
+                local torso = char:FindFirstChild("Torso")
+                local lArm  = char:FindFirstChild("Left Arm")
+                local rArm  = char:FindFirstChild("Right Arm")
+                local lLeg  = char:FindFirstChild("Left Leg")
+                local rLeg  = char:FindFirstChild("Right Leg")
+                bones = {
+                    {head,  torso},
+                    {torso, lArm}, {torso, rArm},
+                    {torso, lLeg}, {torso, rLeg},
+                }
+            end
+            for i = 1, #limbs do
+                drawBone(limbs[i], bones[i] and bones[i][1], bones[i] and bones[i][2])
+            end
+        end)
+        if not ok then HideAll() end
+    end
+
+    espConnections[player] = RunService.RenderStepped:Connect(Update)
+
+    player.CharacterAdded:Connect(function()
+        task.wait(0.5)
+        CreateFullESP(player)
+    end)
 end
 
 for _, p in pairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then CreateFullESP(p) end
 end
-Players.PlayerAdded:Connect(CreateFullESP)
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then CreateFullESP(p) end
+end)
+Players.PlayerRemoving:Connect(function(p)
+    if espConnections[p] then
+        espConnections[p]:Disconnect()
+        espConnections[p] = nil
+    end
+end)
+
+local function valToStr(v)
+    local t = typeof(v)
+    if t == "string"  then return '"' .. v:sub(1, 40) .. '"' end
+    if t == "number"  then return tostring(math.floor(v * 100) / 100) end
+    if t == "boolean" then return tostring(v) end
+    if t == "nil"     then return "nil" end
+    if t == "Instance" then return v:GetFullName() end
+    if t == "Vector3"  then return "V3(" .. math.floor(v.X) .. "," .. math.floor(v.Y) .. "," .. math.floor(v.Z) .. ")" end
+    if t == "CFrame"   then return "CFrame" end
+    return tostring(v)
+end
+
+local SpyAddEntry
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    if method == "FireServer" or method == "InvokeServer" then
+        local args = {...}
+        local argParts = {}
+        for _, v in ipairs(args) do
+            table.insert(argParts, valToStr(v))
+        end
+        local argStr   = table.concat(argParts, ", ")
+        local fullPath = pcall(function() return self:GetFullName() end) and self:GetFullName() or "?"
+        local copyText = fullPath .. ":" .. method .. "(" .. argStr .. ")"
+        if SpyAddEntry then
+            SpyAddEntry(method, fullPath, argStr, copyText)
+        end
+    end
+    return oldNamecall(self, ...)
+end)
 
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name         = "呵呵"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size                   = UDim2.new(0, 480, 0, 300)
-MainFrame.Position               = UDim2.new(0.5, -240, 0.5, -150)
+MainFrame.Size                   = UDim2.new(0, 500, 0, 310)
+MainFrame.Position               = UDim2.new(0.5, -250, 0.5, -155)
 MainFrame.BackgroundColor3       = Color3.fromRGB(6, 7, 12)
 MainFrame.BackgroundTransparency = 0.0
 MainFrame.Visible                = false
@@ -210,7 +271,7 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 local BgImage = Instance.new("ImageLabel", MainFrame)
 BgImage.Size                 = UDim2.new(1, 0, 1, 0)
 BgImage.BackgroundTransparency = 1
-BgImage.ImageTransparency    = 0.55
+BgImage.ImageTransparency    = 0.6
 BgImage.ScaleType            = Enum.ScaleType.Crop
 BgImage.ZIndex               = 0
 BgImage.Image                = "https://img1.pic.in.th/images/078fd4be39028c992.jpg"
@@ -254,7 +315,7 @@ LogoFallback.Size                  = UDim2.new(1, 0, 1, 0)
 LogoFallback.BackgroundTransparency = 1
 LogoFallback.Text                  = "呵呵"
 LogoFallback.Font                  = Enum.Font.GothamBold
-LogoFallback.TextSize              = 12
+LogoFallback.TextSize              = 10
 LogoFallback.TextColor3            = Color3.fromRGB(0, 220, 255)
 LogoFallback.ZIndex                = 4
 
@@ -271,7 +332,7 @@ Title.TextYAlignment   = Enum.TextYAlignment.Center
 Title.ZIndex           = 4
 
 local Version = Instance.new("TextLabel", Header)
-Version.Text             = "v2.0"
+Version.Text             = "v3.0"
 Version.Size             = UDim2.new(0, 60, 0, 48)
 Version.Position         = UDim2.new(0, 116, 0, 0)
 Version.TextColor3       = Color3.fromRGB(80, 100, 160)
@@ -297,7 +358,7 @@ ToggleBtn.Size                   = UDim2.new(0, 56, 0, 56)
 ToggleBtn.Position               = UDim2.new(0.9, 0, 0.15, 0)
 ToggleBtn.Text                   = "呵呵"
 ToggleBtn.Font                   = Enum.Font.GothamBold
-ToggleBtn.TextSize               = 13
+ToggleBtn.TextSize               = 11
 ToggleBtn.TextColor3             = Color3.fromRGB(0, 220, 255)
 ToggleBtn.BackgroundColor3       = Color3.fromRGB(8, 9, 16)
 ToggleBtn.BackgroundTransparency = 0.15
@@ -332,6 +393,7 @@ local Container = Instance.new("Frame", MainFrame)
 Container.Size                = UDim2.new(1, -146, 1, -58)
 Container.Position            = UDim2.new(0, 140, 0, 54)
 Container.BackgroundTransparency = 1
+Container.ClipsDescendants    = true
 Container.ZIndex              = 3
 
 local Pages = {}
@@ -347,11 +409,17 @@ local function CreatePage(tabName)
     local layout = Instance.new("UIListLayout", page)
     layout.Padding = UDim.new(0, 5)
     Pages[tabName] = page
-    return page
+    return page, layout
 end
 
-local EspPage     = CreatePage("ESP")
-local SdamagePage = CreatePage("SDAMAGE")
+local EspPage,     EspLayout     = CreatePage("ESP")
+local SdamagePage, SdamageLayout = CreatePage("SDAMAGE")
+local SpyPage,     SpyLayout     = CreatePage("SPY")
+
+SpyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+SpyLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    SpyPage.CanvasSize = UDim2.new(0, 0, 0, SpyLayout.AbsoluteContentSize.Y + 10)
+end)
 
 local TabButtons = {}
 local function SwitchTab(tabName)
@@ -392,6 +460,7 @@ end
 
 AddTabButton("ESP",     "  ESP")
 AddTabButton("SDAMAGE", "  SDAMAGE")
+AddTabButton("SPY",     "  REMOTE SPY")
 
 local function AddToggle(page, name, target, key)
     local Frame = Instance.new("Frame", page)
@@ -494,10 +563,10 @@ local function AddSlider(page, label, minVal, maxVal, targetTable, key)
         local pct = math.clamp((ip.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
         local val = minVal + pct * (maxVal - minVal)
         val = maxVal <= 10 and (math.floor(val*10)/10) or math.floor(val)
-        targetTable[key]  = val
-        LT.Text           = label .. ":  " .. val
-        Fill.Size         = UDim2.new(pct, 0, 1, 0)
-        Knob.Position     = UDim2.new(pct, 0, 0.5, 0)
+        targetTable[key]      = val
+        LT.Text               = label .. ":  " .. val
+        Fill.Size             = UDim2.new(pct, 0, 1, 0)
+        Knob.Position         = UDim2.new(pct, 0, 0.5, 0)
         Fill.BackgroundColor3 = currentAutoColor
     end
     local drag = false
@@ -571,6 +640,121 @@ AddSlider(EspPage,   "THICKNESS",    0.5, 3, Settings.ESP, "Thickness")
 
 AddToggle(SdamagePage, "ENABLE SDAMAGE", Settings.Sdamage, "Enabled")
 AddSlider(SdamagePage, "DAMAGE",         1, 999, Settings.Sdamage, "Amount")
+
+local SpyClearRow = Instance.new("Frame", SpyPage)
+SpyClearRow.Size             = UDim2.new(1, -6, 0, 34)
+SpyClearRow.BackgroundColor3 = Color3.fromRGB(10, 11, 20)
+SpyClearRow.BackgroundTransparency = 0.05
+SpyClearRow.ZIndex           = 4
+Instance.new("UICorner", SpyClearRow).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", SpyClearRow).Color        = Color3.fromRGB(22, 26, 44)
+
+local SpyCountLabel = Instance.new("TextLabel", SpyClearRow)
+SpyCountLabel.Text              = "REMOTE SPY — 0 entries"
+SpyCountLabel.Size              = UDim2.new(0.6, 0, 1, 0)
+SpyCountLabel.Position          = UDim2.new(0, 10, 0, 0)
+SpyCountLabel.Font              = Enum.Font.GothamBold
+SpyCountLabel.TextSize          = 11
+SpyCountLabel.TextColor3        = Color3.fromRGB(0, 200, 255)
+SpyCountLabel.BackgroundTransparency = 1
+SpyCountLabel.TextXAlignment    = Enum.TextXAlignment.Left
+SpyCountLabel.ZIndex            = 5
+
+local SpyClearBtn = Instance.new("TextButton", SpyClearRow)
+SpyClearBtn.Text             = "CLEAR"
+SpyClearBtn.Size             = UDim2.new(0, 60, 0, 22)
+SpyClearBtn.Position         = UDim2.new(1, -68, 0.5, -11)
+SpyClearBtn.Font             = Enum.Font.GothamBold
+SpyClearBtn.TextSize         = 10
+SpyClearBtn.TextColor3       = Color3.fromRGB(255, 80, 80)
+SpyClearBtn.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+SpyClearBtn.ZIndex           = 5
+Instance.new("UICorner", SpyClearBtn).CornerRadius = UDim.new(0, 6)
+
+local spyEntryCount = 0
+
+SpyAddEntry = function(method, fullPath, argStr, copyText)
+    spyEntryCount = spyEntryCount + 1
+    SpyCountLabel.Text = "REMOTE SPY — " .. spyEntryCount .. " entries"
+
+    local row = Instance.new("Frame", SpyPage)
+    row.Size             = UDim2.new(1, -6, 0, 52)
+    row.BackgroundColor3 = Color3.fromRGB(8, 10, 18)
+    row.BackgroundTransparency = 0.05
+    row.ZIndex           = 4
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 7)
+    local rs = Instance.new("UIStroke", row)
+    rs.Color     = Color3.fromRGB(0, 80, 180)
+    rs.Thickness = 0.8
+
+    local methodTag = Instance.new("TextLabel", row)
+    methodTag.Text       = "[" .. method .. "]"
+    methodTag.Size       = UDim2.new(0, 120, 0, 18)
+    methodTag.Position   = UDim2.new(0, 8, 0, 4)
+    methodTag.Font       = Enum.Font.GothamBold
+    methodTag.TextSize   = 10
+    methodTag.TextColor3 = method == "FireServer" and Color3.fromRGB(255, 180, 0) or Color3.fromRGB(180, 100, 255)
+    methodTag.BackgroundTransparency = 1
+    methodTag.TextXAlignment = Enum.TextXAlignment.Left
+    methodTag.ZIndex     = 5
+
+    local pathLabel = Instance.new("TextLabel", row)
+    pathLabel.Text       = fullPath
+    pathLabel.Size       = UDim2.new(1, -70, 0, 16)
+    pathLabel.Position   = UDim2.new(0, 8, 0, 20)
+    pathLabel.Font       = Enum.Font.Gotham
+    pathLabel.TextSize   = 10
+    pathLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+    pathLabel.BackgroundTransparency = 1
+    pathLabel.TextXAlignment = Enum.TextXAlignment.Left
+    pathLabel.TextTruncate   = Enum.TextTruncate.AtEnd
+    pathLabel.ZIndex     = 5
+
+    local argLabel = Instance.new("TextLabel", row)
+    argLabel.Text       = argStr == "" and "(no args)" or argStr
+    argLabel.Size       = UDim2.new(1, -70, 0, 14)
+    argLabel.Position   = UDim2.new(0, 8, 0, 36)
+    argLabel.Font       = Enum.Font.Gotham
+    argLabel.TextSize   = 9
+    argLabel.TextColor3 = Color3.fromRGB(120, 150, 200)
+    argLabel.BackgroundTransparency = 1
+    argLabel.TextXAlignment = Enum.TextXAlignment.Left
+    argLabel.TextTruncate   = Enum.TextTruncate.AtEnd
+    argLabel.ZIndex     = 5
+
+    local copyBtn = Instance.new("TextButton", row)
+    copyBtn.Text             = "COPY"
+    copyBtn.Size             = UDim2.new(0, 48, 0, 20)
+    copyBtn.Position         = UDim2.new(1, -54, 0.5, -10)
+    copyBtn.Font             = Enum.Font.GothamBold
+    copyBtn.TextSize         = 9
+    copyBtn.TextColor3       = Color3.fromRGB(0, 200, 255)
+    copyBtn.BackgroundColor3 = Color3.fromRGB(0, 30, 60)
+    copyBtn.ZIndex           = 5
+    Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 5)
+
+    copyBtn.MouseButton1Click:Connect(function()
+        setclipboard(copyText)
+        copyBtn.Text      = "OK!"
+        copyBtn.TextColor3 = Color3.fromRGB(0, 255, 100)
+        task.delay(1.2, function()
+            copyBtn.Text      = "COPY"
+            copyBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
+        end)
+    end)
+
+    row.Parent = SpyPage
+end
+
+SpyClearBtn.MouseButton1Click:Connect(function()
+    for _, child in pairs(SpyPage:GetChildren()) do
+        if child:IsA("Frame") and child ~= SpyClearRow then
+            child:Destroy()
+        end
+    end
+    spyEntryCount      = 0
+    SpyCountLabel.Text = "REMOTE SPY — 0 entries"
+end)
 
 RunService.RenderStepped:Connect(function()
     MainStroke.Color     = currentAutoColor
