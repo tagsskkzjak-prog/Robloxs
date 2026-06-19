@@ -82,7 +82,7 @@ local function CreateFullESP(player)
     local function Update()
         local char = player.Character
         local hum  = char and char:FindFirstChild("Humanoid")
-        if not char or not char:FindFirstChild("HumanoidRootPart") or not hum or hum.Health <= 0 then
+        if not char or not char:FindFirstChild("HumanoidRootPart") or not hum then
             for _, v in pairs(esp)   do v.Visible = false end
             for i = 1, #limbs do limbs[i].Visible = false end
             return
