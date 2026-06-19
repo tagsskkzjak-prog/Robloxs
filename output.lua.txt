@@ -349,41 +349,41 @@ ScreenGui.Name         = "呵呵"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size                   = UDim2.new(0, 500, 0, 310)
-MainFrame.Position               = UDim2.new(0.5, -250, 0.5, -155)
-MainFrame.BackgroundColor3       = Color3.fromRGB(6, 7, 12)
+MainFrame.Size                   = UDim2.new(0, 455, 0, 270)
+MainFrame.Position               = UDim2.new(0.5, -228, 0.5, -135)
+MainFrame.BackgroundColor3       = Color3.fromRGB(6, 7, 13)
 MainFrame.BackgroundTransparency = 0.0
 MainFrame.Visible                = false
 MainFrame.Active                 = true
 MainFrame.Draggable              = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
 local BgImage = Instance.new("ImageLabel", MainFrame)
 BgImage.Size                 = UDim2.new(1, 0, 1, 0)
 BgImage.BackgroundTransparency = 1
-BgImage.ImageTransparency    = 0.6
+BgImage.ImageTransparency    = 0.65
 BgImage.ScaleType            = Enum.ScaleType.Crop
 BgImage.ZIndex               = 0
 BgImage.Image                = "https://img1.pic.in.th/images/078fd4be39028c992.jpg"
-Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 12)
 
 local Overlay = Instance.new("Frame", MainFrame)
 Overlay.Size                   = UDim2.new(1, 0, 1, 0)
-Overlay.BackgroundColor3       = Color3.fromRGB(5, 6, 12)
-Overlay.BackgroundTransparency = 0.45
+Overlay.BackgroundColor3       = Color3.fromRGB(4, 5, 11)
+Overlay.BackgroundTransparency = 0.38
 Overlay.ZIndex                 = 1
-Instance.new("UICorner", Overlay).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", Overlay).CornerRadius = UDim.new(0, 12)
 
 local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Thickness       = 1.5
+MainStroke.Thickness       = 1.2
 MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local Header = Instance.new("Frame", MainFrame)
-Header.Size                   = UDim2.new(1, 0, 0, 48)
-Header.BackgroundColor3       = Color3.fromRGB(6, 7, 14)
-Header.BackgroundTransparency = 0.05
+Header.Size                   = UDim2.new(1, 0, 0, 42)
+Header.BackgroundColor3       = Color3.fromRGB(7, 8, 16)
+Header.BackgroundTransparency = 0.0
 Header.ZIndex                 = 3
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
 
 local LogoFrame = Instance.new("Frame", Header)
 LogoFrame.Size                   = UDim2.new(0, 36, 0, 36)
@@ -411,11 +411,11 @@ LogoFallback.ZIndex                = 4
 
 local Title = Instance.new("TextLabel", Header)
 Title.Text             = "呵呵"
-Title.Size             = UDim2.new(0, 200, 0, 48)
-Title.Position         = UDim2.new(0, 50, 0, 0)
+Title.Size             = UDim2.new(0, 180, 0, 42)
+Title.Position         = UDim2.new(0, 48, 0, 0)
 Title.TextColor3       = Color3.fromRGB(255, 255, 255)
 Title.Font             = Enum.Font.GothamBold
-Title.TextSize         = 15
+Title.TextSize         = 14
 Title.BackgroundTransparency = 1
 Title.TextXAlignment   = Enum.TextXAlignment.Left
 Title.TextYAlignment   = Enum.TextYAlignment.Center
@@ -423,25 +423,27 @@ Title.ZIndex           = 4
 
 local Version = Instance.new("TextLabel", Header)
 Version.Text             = "v3.0"
-Version.Size             = UDim2.new(0, 60, 0, 48)
-Version.Position         = UDim2.new(0, 116, 0, 0)
-Version.TextColor3       = Color3.fromRGB(80, 100, 160)
+Version.Size             = UDim2.new(0, 50, 0, 42)
+Version.Position         = UDim2.new(0, 106, 0, 0)
+Version.TextColor3       = Color3.fromRGB(60, 80, 140)
 Version.Font             = Enum.Font.Gotham
-Version.TextSize         = 10
+Version.TextSize         = 9
 Version.BackgroundTransparency = 1
 Version.TextXAlignment   = Enum.TextXAlignment.Left
 Version.TextYAlignment   = Enum.TextYAlignment.Center
 Version.ZIndex           = 4
 
 local CloseBtn = Instance.new("TextButton", Header)
-CloseBtn.Text                = "X"
-CloseBtn.Size                = UDim2.new(0, 40, 1, 0)
-CloseBtn.Position            = UDim2.new(1, -44, 0, 0)
+CloseBtn.Text                = "×"
+CloseBtn.Size                = UDim2.new(0, 36, 0, 36)
+CloseBtn.Position            = UDim2.new(1, -40, 0.5, -18)
 CloseBtn.Font                = Enum.Font.GothamBold
 CloseBtn.TextColor3          = Color3.fromRGB(255, 80, 80)
-CloseBtn.TextSize            = 14
-CloseBtn.BackgroundTransparency = 1
+CloseBtn.TextSize            = 16
+CloseBtn.BackgroundColor3    = Color3.fromRGB(40, 8, 8)
+CloseBtn.BackgroundTransparency = 0.4
 CloseBtn.ZIndex              = 5
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
 
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
 ToggleBtn.Size                   = UDim2.new(0, 56, 0, 56)
@@ -466,22 +468,22 @@ CloseBtn.MouseButton1Click:Connect(function()
 end)
 
 local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size                   = UDim2.new(0, 128, 1, -56)
-Sidebar.Position               = UDim2.new(0, 4, 0, 52)
-Sidebar.BackgroundColor3       = Color3.fromRGB(6, 7, 14)
-Sidebar.BackgroundTransparency = 0.05
+Sidebar.Size                   = UDim2.new(0, 116, 1, -48)
+Sidebar.Position               = UDim2.new(0, 4, 0, 44)
+Sidebar.BackgroundColor3       = Color3.fromRGB(7, 8, 16)
+Sidebar.BackgroundTransparency = 0.0
 Sidebar.ZIndex                 = 3
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
 local SidebarList = Instance.new("UIListLayout", Sidebar)
-SidebarList.Padding             = UDim.new(0, 4)
+SidebarList.Padding             = UDim.new(0, 3)
 SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 SidebarList.VerticalAlignment   = Enum.VerticalAlignment.Top
 local SidebarPad = Instance.new("UIPadding", Sidebar)
-SidebarPad.PaddingTop = UDim.new(0, 8)
+SidebarPad.PaddingTop = UDim.new(0, 7)
 
 local Container = Instance.new("Frame", MainFrame)
-Container.Size                = UDim2.new(1, -146, 1, -58)
-Container.Position            = UDim2.new(0, 140, 0, 54)
+Container.Size                = UDim2.new(1, -130, 1, -50)
+Container.Position            = UDim2.new(0, 124, 0, 46)
 Container.BackgroundTransparency = 1
 Container.ClipsDescendants    = true
 Container.ZIndex              = 3
@@ -530,17 +532,17 @@ end
 
 local function AddTabButton(name, label)
     local btn = Instance.new("TextButton", Sidebar)
-    btn.Size             = UDim2.new(0, 112, 0, 36)
+    btn.Size             = UDim2.new(0, 100, 0, 32)
     btn.Text             = label
     btn.Font             = Enum.Font.GothamBold
-    btn.TextSize         = 11
+    btn.TextSize         = 10
     btn.TextXAlignment   = Enum.TextXAlignment.Left
-    btn.TextColor3       = Color3.fromRGB(150, 150, 170)
-    btn.BackgroundColor3 = Color3.fromRGB(14, 16, 28)
+    btn.TextColor3       = Color3.fromRGB(130, 130, 155)
+    btn.BackgroundColor3 = Color3.fromRGB(12, 14, 24)
     btn.ZIndex           = 4
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     local s = Instance.new("UIStroke", btn)
-    s.Color     = Color3.fromRGB(25, 28, 48)
+    s.Color     = Color3.fromRGB(22, 25, 44)
     s.Thickness = 1
     local pad = Instance.new("UIPadding", btn)
     pad.PaddingLeft = UDim.new(0, 10)
@@ -550,7 +552,7 @@ end
 
 AddTabButton("ESP", "  ESP")
 AddTabButton("AIM", "  AIM")
-AddTabButton("SPY", "  REMOTE EVENT")
+AddTabButton("SPY", "  SPY")
 
 local function AddToggle(page, name, target, key)
     local Frame = Instance.new("Frame", page)
@@ -733,51 +735,60 @@ AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander")
 AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize")
 
 local SpyHeaderRow = Instance.new("Frame", SpyPage)
-SpyHeaderRow.Size             = UDim2.new(1, -6, 0, 34)
-SpyHeaderRow.BackgroundColor3 = Color3.fromRGB(10, 11, 20)
-SpyHeaderRow.BackgroundTransparency = 0.05
+SpyHeaderRow.Size             = UDim2.new(1, -6, 0, 30)
+SpyHeaderRow.BackgroundColor3 = Color3.fromRGB(10, 12, 22)
+SpyHeaderRow.BackgroundTransparency = 0.0
 SpyHeaderRow.ZIndex           = 4
-Instance.new("UICorner", SpyHeaderRow).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", SpyHeaderRow).Color        = Color3.fromRGB(22, 26, 44)
+Instance.new("UICorner", SpyHeaderRow).CornerRadius = UDim.new(0, 7)
+local SpyHeaderStroke = Instance.new("UIStroke", SpyHeaderRow)
+SpyHeaderStroke.Color     = Color3.fromRGB(0, 80, 160)
+SpyHeaderStroke.Thickness = 1
 
-local SpyCountLabel = Instance.new("TextLabel", SpyHeaderRow)
-SpyCountLabel.Text              = "REMOTE EVENT — 0 captured"
-SpyCountLabel.Size              = UDim2.new(0.55, 0, 1, 0)
-SpyCountLabel.Position          = UDim2.new(0, 10, 0, 0)
-SpyCountLabel.Font              = Enum.Font.GothamBold
-SpyCountLabel.TextSize          = 11
-SpyCountLabel.TextColor3        = Color3.fromRGB(0, 200, 255)
-SpyCountLabel.BackgroundTransparency = 1
-SpyCountLabel.TextXAlignment    = Enum.TextXAlignment.Left
-SpyCountLabel.ZIndex            = 5
+local SpyTitleDot = Instance.new("Frame", SpyHeaderRow)
+SpyTitleDot.Size             = UDim2.new(0, 6, 0, 6)
+SpyTitleDot.Position         = UDim2.new(0, 10, 0.5, -3)
+SpyTitleDot.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+SpyTitleDot.ZIndex           = 5
+Instance.new("UICorner", SpyTitleDot).CornerRadius = UDim.new(1, 0)
+
+local SpyTitleLabel = Instance.new("TextLabel", SpyHeaderRow)
+SpyTitleLabel.Text              = "REMOTE SPY"
+SpyTitleLabel.Size              = UDim2.new(0.5, 0, 1, 0)
+SpyTitleLabel.Position          = UDim2.new(0, 22, 0, 0)
+SpyTitleLabel.Font              = Enum.Font.GothamBold
+SpyTitleLabel.TextSize          = 10
+SpyTitleLabel.TextColor3        = Color3.fromRGB(180, 200, 230)
+SpyTitleLabel.BackgroundTransparency = 1
+SpyTitleLabel.TextXAlignment    = Enum.TextXAlignment.Left
+SpyTitleLabel.ZIndex            = 5
 
 local CopyAllBtn = Instance.new("TextButton", SpyHeaderRow)
 CopyAllBtn.Text             = "COPY ALL"
-CopyAllBtn.Size             = UDim2.new(0, 68, 0, 22)
-CopyAllBtn.Position         = UDim2.new(1, -136, 0.5, -11)
+CopyAllBtn.Size             = UDim2.new(0, 62, 0, 20)
+CopyAllBtn.Position         = UDim2.new(1, -128, 0.5, -10)
 CopyAllBtn.Font             = Enum.Font.GothamBold
 CopyAllBtn.TextSize         = 9
 CopyAllBtn.TextColor3       = Color3.fromRGB(0, 255, 160)
-CopyAllBtn.BackgroundColor3 = Color3.fromRGB(0, 40, 20)
+CopyAllBtn.BackgroundColor3 = Color3.fromRGB(0, 35, 18)
 CopyAllBtn.ZIndex           = 5
-Instance.new("UICorner", CopyAllBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", CopyAllBtn).CornerRadius = UDim.new(0, 5)
 
 local ClearSpyBtn = Instance.new("TextButton", SpyHeaderRow)
 ClearSpyBtn.Text             = "CLEAR"
-ClearSpyBtn.Size             = UDim2.new(0, 54, 0, 22)
-ClearSpyBtn.Position         = UDim2.new(1, -62, 0.5, -11)
+ClearSpyBtn.Size             = UDim2.new(0, 48, 0, 20)
+ClearSpyBtn.Position         = UDim2.new(1, -54, 0.5, -10)
 ClearSpyBtn.Font             = Enum.Font.GothamBold
 ClearSpyBtn.TextSize         = 9
 ClearSpyBtn.TextColor3       = Color3.fromRGB(255, 80, 80)
-ClearSpyBtn.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+ClearSpyBtn.BackgroundColor3 = Color3.fromRGB(35, 8, 8)
 ClearSpyBtn.ZIndex           = 5
-Instance.new("UICorner", ClearSpyBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", ClearSpyBtn).CornerRadius = UDim.new(0, 5)
 
 local spyCount = 0
 
 RemoteAddRow = function(method, name, fullPath, argStr, copyTxt)
     spyCount = spyCount + 1
-    SpyCountLabel.Text = "REMOTE EVENT — " .. spyCount .. " captured"
+    SpyTitleLabel.Text = "REMOTE SPY  ·  " .. spyCount
 
     local row = Instance.new("Frame", SpyPage)
     row.Size             = UDim2.new(1, -6, 0, 52)
@@ -865,7 +876,7 @@ ClearSpyBtn.MouseButton1Click:Connect(function()
     end
     spyCount           = 0
     spyLog             = {}
-    SpyCountLabel.Text = "REMOTE EVENT — 0 captured"
+    SpyTitleLabel.Text = "REMOTE SPY"
 end)
 
 RunService.RenderStepped:Connect(function()
