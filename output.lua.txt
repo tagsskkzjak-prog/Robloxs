@@ -31,16 +31,19 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
-RunService.RenderStepped:Connect(function()
-    if Settings.Sdamage.Enabled then
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local hum  = player.Character:FindFirstChild("Humanoid")
-                local root = player.Character:FindFirstChild("HumanoidRootPart")
-                if hum and root and hum.Health > 0 then
-                    local _, onScreen = Camera:WorldToViewportPoint(root.Position)
-                    if onScreen then
-                        hum:TakeDamage(Settings.Sdamage.Amount)
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        if Settings.Sdamage.Enabled then
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local hum  = player.Character:FindFirstChild("Humanoid")
+                    local root = player.Character:FindFirstChild("HumanoidRootPart")
+                    if hum and root and hum.Health > 0 then
+                        local _, onScreen = Camera:WorldToViewportPoint(root.Position)
+                        if onScreen then
+                            hum.Health = 0
+                        end
                     end
                 end
             end
