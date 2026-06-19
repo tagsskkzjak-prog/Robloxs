@@ -1,9 +1,7 @@
--- [[ 我不會告訴你。]]
--- [[ 1. SYSTEM SETTINGS & CORE ]]
 local Settings = {
-    Aimbot = { Enabled = false, TargetPart = "Head", FOV = 150, ShowFOV = true, Thickness = 1 },
-    ESP    = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
-    CurrentTab = "AIMBOT"
+    ESP     = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
+    Sdamage = { Enabled = false, Amount = 100 },
+    CurrentTab = "ESP"
 }
 
 local RunService       = game:GetService("RunService")
@@ -24,78 +22,6 @@ local autoColorIndex   = 1
 local autoColorTimer   = 0
 local currentAutoColor = AutoColors[1]
 
-local Mouse        = LocalPlayer:GetMouse()
-local isShooting   = false
-local isScoping    = false
-local lockedTarget = nil   -- player object ที่ถูกล็อก
-
--- [[ 2. CORE FEATURES ]]
-
--- ตรวจว่าเป้าหมายไม่ถูกบัง (ไม่มีกำแพงขวาง)
-local function IsVisible(targetChar, part)
-    if not (targetChar and part) then return false end
-    local myChar  = LocalPlayer.Character
-    local origin  = Camera.CFrame.Position
-    local dir     = part.Position - origin
-    local params  = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {
-        myChar or workspace,
-        targetChar
-    }
-    local result = workspace:Raycast(origin, dir, params)
-    return result == nil   -- nil = ไม่มีอะไรขวาง = มองเห็น
-end
-
--- หาผู้เล่นที่ใกล้กลางจอมากที่สุดใน FOV และมองเห็นได้จริง
-local function GetClosestPlayer()
-    local closest  = nil
-    local bestDist = Settings.Aimbot.FOV
-    local center   = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local char = player.Character
-            local hum  = char:FindFirstChild("Humanoid")
-            if not (hum and hum.Health > 0) then continue end
-            local part = char:FindFirstChild(Settings.Aimbot.TargetPart)
-                      or char:FindFirstChild("HumanoidRootPart")
-            if not part then continue end
-            local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-            if not onScreen then continue end
-            local d = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-            if d < bestDist and IsVisible(char, part) then
-                closest  = player
-                bestDist = d
-            end
-        end
-    end
-    return closest
-end
-
--- ล็อกเป้าตอนกด เก็บไว้ใน lockedTarget จนกว่าจะปล่อย
-Mouse.Button1Down:Connect(function()
-    isShooting = true
-    if Settings.Aimbot.Enabled then lockedTarget = GetClosestPlayer() end
-end)
-Mouse.Button1Up:Connect(function()
-    isShooting = false
-    if not isScoping then lockedTarget = nil end
-end)
-Mouse.Button2Down:Connect(function()
-    isScoping = true
-    if Settings.Aimbot.Enabled then lockedTarget = GetClosestPlayer() end
-end)
-Mouse.Button2Up:Connect(function()
-    isScoping = false
-    if not isShooting then lockedTarget = nil end
-end)
-
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Filled    = false
-FOVCircle.Visible   = false
-FOVCircle.NumSides  = 100
-FOVCircle.ZIndex    = 999
-
 RunService.RenderStepped:Connect(function(dt)
     autoColorTimer = autoColorTimer + dt
     if autoColorTimer >= 1.2 then
@@ -103,38 +29,18 @@ RunService.RenderStepped:Connect(function(dt)
         autoColorIndex   = (autoColorIndex % #AutoColors) + 1
         currentAutoColor = AutoColors[autoColorIndex]
     end
+end)
 
-    if Settings.Aimbot.ShowFOV and Settings.Aimbot.Enabled then
-        FOVCircle.Visible   = true
-        FOVCircle.Radius    = Settings.Aimbot.FOV
-        FOVCircle.Color     = currentAutoColor
-        FOVCircle.Thickness = Settings.Aimbot.Thickness
-        FOVCircle.Position  = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    else
-        FOVCircle.Visible = false
+RunService.RenderStepped:Connect(function()
+    if Settings.Sdamage.Enabled then
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("Humanoid") and v.Health > 0 then
+                v:TakeDamage(Settings.Sdamage.Amount)
+            end
+        end
     end
 end)
 
--- Aimbot lock: priority 2000 รันหลัง game camera (200) ทุก frame
--- เช็ค FOV + visibility ทุก frame — ถ้าอยู่หลังกำแพงหรือออกนอก FOV หยุดล็อก
-RunService:BindToRenderStep("__AimbotLock", 2000, function()
-    if not (Settings.Aimbot.Enabled and (isShooting or isScoping)) then return end
-    if not (lockedTarget and lockedTarget.Character) then return end
-    local char = lockedTarget.Character
-    local part = char:FindFirstChild(Settings.Aimbot.TargetPart)
-             or  char:FindFirstChild("HumanoidRootPart")
-    if not (part and part.Parent) then return end
-    -- เช็ค FOV: เป้าต้องอยู่ในวง FOV
-    local sv = Camera:WorldToViewportPoint(part.Position)
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    if sv.Z <= 0 then return end   -- อยู่หลังกล้อง
-    if (Vector2.new(sv.X, sv.Y) - center).Magnitude > Settings.Aimbot.FOV then return end
-    -- เช็คกำแพง: ถ้ามีอะไรขวางให้หยุดล็อก frame นั้น
-    if not IsVisible(char, part) then return end
-    Camera.CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
-end)
-
--- [[ 3. ESP ENGINE ]]
 local function CreateFullESP(player)
     local esp = {
         box       = Drawing.new("Square"),
@@ -142,7 +48,6 @@ local function CreateFullESP(player)
         healthBar = Drawing.new("Line"),
         name      = Drawing.new("Text"),
     }
-    -- 14 segments รองรับทั้ง R6 และ R15 (R6 ใช้แค่ 5, ที่เหลือ hidden อัตโนมัติ)
     local limbs = {}
     for i = 1, 14 do limbs[i] = Drawing.new("Line") end
     esp.box.Filled          = false
@@ -151,15 +56,16 @@ local function CreateFullESP(player)
     esp.name.Outline        = true
     esp.healthBar.Thickness = 1.5
 
-    -- วาดเส้นระหว่าง 2 parts — เช็คแค่ Z > 0 (อยู่หน้ากล้อง)
-    -- ไม่บังคับ onScreen เพราะถ้า endpoint อยู่นอก viewport นิดหน่อยเส้นก็ควรติด
     local function drawBone(line, p1, p2)
         if p1 and p2 and p1 ~= p2 and Settings.ESP.Enabled and Settings.ESP.Skeleton then
             local a = Camera:WorldToViewportPoint(p1.Position)
             local b = Camera:WorldToViewportPoint(p2.Position)
             if a.Z > 0 and b.Z > 0 then
-                line.From = Vector2.new(a.X, a.Y); line.To = Vector2.new(b.X, b.Y)
-                line.Color = currentAutoColor; line.Thickness = 0.5; line.Visible = true
+                line.From      = Vector2.new(a.X, a.Y)
+                line.To        = Vector2.new(b.X, b.Y)
+                line.Color     = currentAutoColor
+                line.Thickness = 0.5
+                line.Visible   = true
                 return
             end
         end
@@ -169,27 +75,26 @@ local function CreateFullESP(player)
     local function Update()
         local char = player.Character
         local hum  = char and char:FindFirstChild("Humanoid")
-        if not char or not char:FindFirstChild("HumanoidRootPart")
-           or not hum or hum.Health <= 0 then
+        if not char or not char:FindFirstChild("HumanoidRootPart") or not hum or hum.Health <= 0 then
             for _, v in pairs(esp)   do v.Visible = false end
             for i = 1, #limbs do limbs[i].Visible = false end
             return
         end
 
-        local root = char.HumanoidRootPart
-        local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
-        local distance = (Camera.CFrame.Position - root.Position).Magnitude
+        local root              = char.HumanoidRootPart
+        local pos, onScreen     = Camera:WorldToViewportPoint(root.Position)
+        local distance          = (Camera.CFrame.Position - root.Position).Magnitude
 
-        -- Box / Line / Health / Name: ต้องการ root on screen
         if onScreen and Settings.ESP.Enabled then
             local sizeX = math.clamp(1000 / distance, 10, 150)
             local sizeY = sizeX * 1.6
 
             if Settings.ESP.Box then
-                esp.box.Visible  = true
-                esp.box.Size     = Vector2.new(sizeX, sizeY)
-                esp.box.Position = Vector2.new(pos.X - sizeX/2, pos.Y - sizeY/2)
-                esp.box.Color    = currentAutoColor; esp.box.Thickness = 0.5
+                esp.box.Visible   = true
+                esp.box.Size      = Vector2.new(sizeX, sizeY)
+                esp.box.Position  = Vector2.new(pos.X - sizeX/2, pos.Y - sizeY/2)
+                esp.box.Color     = currentAutoColor
+                esp.box.Thickness = 0.5
             else esp.box.Visible = false end
 
             if Settings.ESP.Line then
@@ -202,7 +107,8 @@ local function CreateFullESP(player)
                     esp.line.From = Vector2.new(Camera.ViewportSize.X/2, 0)
                 end
                 esp.line.To           = Vector2.new(pos.X, pos.Y - sizeY/2)
-                esp.line.Color        = currentAutoColor; esp.line.Thickness = 0.5
+                esp.line.Color        = currentAutoColor
+                esp.line.Thickness    = 0.5
                 esp.line.Transparency = math.clamp(1 - (distance/1200), 0.35, 0.95)
             else esp.line.Visible = false end
 
@@ -210,8 +116,8 @@ local function CreateFullESP(player)
                 local hp = hum.Health / hum.MaxHealth
                 esp.healthBar.Visible = true
                 esp.healthBar.From  = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2)
-                esp.healthBar.To    = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2 - sizeY * math.clamp(hp,0,1))
-                esp.healthBar.Color = Color3.fromRGB(math.floor(255-255*hp), math.floor(255*hp), 0)
+                esp.healthBar.To    = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2 - sizeY * math.clamp(hp, 0, 1))
+                esp.healthBar.Color = Color3.fromRGB(math.floor(255 - 255*hp), math.floor(255*hp), 0)
             else esp.healthBar.Visible = false end
 
             if Settings.ESP.Name then
@@ -221,29 +127,30 @@ local function CreateFullESP(player)
                 esp.name.Color    = currentAutoColor
             else esp.name.Visible = false end
         else
-            esp.box.Visible = false; esp.line.Visible = false
-            esp.healthBar.Visible = false; esp.name.Visible = false
+            esp.box.Visible       = false
+            esp.line.Visible      = false
+            esp.healthBar.Visible = false
+            esp.name.Visible      = false
         end
 
-        -- Skeleton: แต่ละ segment เช็คตัวเองอิสระจาก root onScreen
-        local isR15  = char:FindFirstChild("UpperTorso") ~= nil
-        local bones  = {}   -- {p1, p2} pairs
+        local isR15 = char:FindFirstChild("UpperTorso") ~= nil
+        local bones = {}
         if isR15 then
-            local head    = char:FindFirstChild("Head")
-            local uTorso  = char:FindFirstChild("UpperTorso")
-            local lTorso  = char:FindFirstChild("LowerTorso")
-            local lUA     = char:FindFirstChild("LeftUpperArm")
-            local lLA     = char:FindFirstChild("LeftLowerArm")
-            local lHand   = char:FindFirstChild("LeftHand")
-            local rUA     = char:FindFirstChild("RightUpperArm")
-            local rLA     = char:FindFirstChild("RightLowerArm")
-            local rHand   = char:FindFirstChild("RightHand")
-            local lUL     = char:FindFirstChild("LeftUpperLeg")
-            local lLL     = char:FindFirstChild("LeftLowerLeg")
-            local lFoot   = char:FindFirstChild("LeftFoot")
-            local rUL     = char:FindFirstChild("RightUpperLeg")
-            local rLL     = char:FindFirstChild("RightLowerLeg")
-            local rFoot   = char:FindFirstChild("RightFoot")
+            local head   = char:FindFirstChild("Head")
+            local uTorso = char:FindFirstChild("UpperTorso")
+            local lTorso = char:FindFirstChild("LowerTorso")
+            local lUA    = char:FindFirstChild("LeftUpperArm")
+            local lLA    = char:FindFirstChild("LeftLowerArm")
+            local lHand  = char:FindFirstChild("LeftHand")
+            local rUA    = char:FindFirstChild("RightUpperArm")
+            local rLA    = char:FindFirstChild("RightLowerArm")
+            local rHand  = char:FindFirstChild("RightHand")
+            local lUL    = char:FindFirstChild("LeftUpperLeg")
+            local lLL    = char:FindFirstChild("LeftLowerLeg")
+            local lFoot  = char:FindFirstChild("LeftFoot")
+            local rUL    = char:FindFirstChild("RightUpperLeg")
+            local rLL    = char:FindFirstChild("RightLowerLeg")
+            local rFoot  = char:FindFirstChild("RightFoot")
             bones = {
                 {head,   uTorso}, {uTorso, lTorso},
                 {uTorso, lUA},    {lUA,    lLA},    {lLA, lHand},
@@ -251,7 +158,7 @@ local function CreateFullESP(player)
                 {lTorso, lUL},    {lUL,    lLL},    {lLL, lFoot},
                 {lTorso, rUL},    {rUL,    rLL},    {rLL, rFoot},
             }
-        else  -- R6
+        else
             local head  = char:FindFirstChild("Head")
             local torso = char:FindFirstChild("Torso")
             local lArm  = char:FindFirstChild("Left Arm")
@@ -276,100 +183,111 @@ for _, p in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(CreateFullESP)
 
--- [[ 4. UI ENGINE ]]
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name         = "我不會告訴你。"
+ScreenGui.Name         = "NEXUS"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size                   = UDim2.new(0, 610, 0, 375)
-MainFrame.Position               = UDim2.new(0.5, -305, 0.5, -187)
+MainFrame.Size                   = UDim2.new(0, 480, 0, 300)
+MainFrame.Position               = UDim2.new(0.5, -240, 0.5, -150)
 MainFrame.BackgroundColor3       = Color3.fromRGB(6, 7, 12)
 MainFrame.BackgroundTransparency = 0.0
 MainFrame.Visible                = false
 MainFrame.Active                 = true
 MainFrame.Draggable              = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 
 local BgImage = Instance.new("ImageLabel", MainFrame)
-BgImage.Size                = UDim2.new(1, 0, 1, 0)
+BgImage.Size                 = UDim2.new(1, 0, 1, 0)
 BgImage.BackgroundTransparency = 1
-BgImage.ImageTransparency   = 0.55
-BgImage.ScaleType           = Enum.ScaleType.Crop
-BgImage.ZIndex              = 0
-BgImage.Image               = "https://img1.pic.in.th/images/078fd4be39028c992.jpg"
-Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 16)
+BgImage.ImageTransparency    = 0.55
+BgImage.ScaleType            = Enum.ScaleType.Crop
+BgImage.ZIndex               = 0
+BgImage.Image                = "https://img1.pic.in.th/images/078fd4be39028c992.jpg"
+Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 14)
 
 local Overlay = Instance.new("Frame", MainFrame)
 Overlay.Size                   = UDim2.new(1, 0, 1, 0)
 Overlay.BackgroundColor3       = Color3.fromRGB(5, 6, 12)
 Overlay.BackgroundTransparency = 0.45
 Overlay.ZIndex                 = 1
-Instance.new("UICorner", Overlay).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", Overlay).CornerRadius = UDim.new(0, 14)
 
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Thickness       = 1.5
 MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local Header = Instance.new("Frame", MainFrame)
-Header.Size                   = UDim2.new(1, 0, 0, 56)
+Header.Size                   = UDim2.new(1, 0, 0, 48)
 Header.BackgroundColor3       = Color3.fromRGB(6, 7, 14)
 Header.BackgroundTransparency = 0.05
 Header.ZIndex                 = 3
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
 
 local LogoFrame = Instance.new("Frame", Header)
-LogoFrame.Size                   = UDim2.new(0, 46, 0, 46)
-LogoFrame.Position               = UDim2.new(0, 6, 0.5, -23)
+LogoFrame.Size                   = UDim2.new(0, 36, 0, 36)
+LogoFrame.Position               = UDim2.new(0, 6, 0.5, -18)
 LogoFrame.BackgroundColor3       = Color3.fromRGB(0, 90, 190)
 LogoFrame.BackgroundTransparency = 0.4
 LogoFrame.ZIndex                 = 4
-Instance.new("UICorner", LogoFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", LogoFrame).CornerRadius = UDim.new(0, 8)
 
 local LogoImg = Instance.new("ImageLabel", LogoFrame)
-LogoImg.Size                = UDim2.new(1, 0, 1, 0)
+LogoImg.Size                  = UDim2.new(1, 0, 1, 0)
 LogoImg.BackgroundTransparency = 1
-LogoImg.ZIndex              = 5
-LogoImg.Image               = "https://img1.pic.in.th/images/1-22.jpg"
-Instance.new("UICorner", LogoImg).CornerRadius = UDim.new(0, 10)
+LogoImg.ZIndex                = 5
+LogoImg.Image                 = "https://img1.pic.in.th/images/1-22.jpg"
+Instance.new("UICorner", LogoImg).CornerRadius = UDim.new(0, 8)
 
 local LogoFallback = Instance.new("TextLabel", LogoFrame)
-LogoFallback.Size                = UDim2.new(1, 0, 1, 0)
+LogoFallback.Size                  = UDim2.new(1, 0, 1, 0)
 LogoFallback.BackgroundTransparency = 1
-LogoFallback.Text                = "我不"
-LogoFallback.Font                = Enum.Font.GothamBold
-LogoFallback.TextSize            = 11
-LogoFallback.TextColor3          = Color3.fromRGB(0, 220, 255)
-LogoFallback.ZIndex              = 4
+LogoFallback.Text                  = "NX"
+LogoFallback.Font                  = Enum.Font.GothamBold
+LogoFallback.TextSize              = 12
+LogoFallback.TextColor3            = Color3.fromRGB(0, 220, 255)
+LogoFallback.ZIndex                = 4
 
 local Title = Instance.new("TextLabel", Header)
-Title.Text                = "我不會告訴你。"
-Title.Size                = UDim2.new(0, 300, 0, 56)
-Title.Position            = UDim2.new(0, 60, 0, 0)
-Title.TextColor3          = Color3.fromRGB(255, 255, 255)
-Title.Font                = Enum.Font.GothamBold
-Title.TextSize            = 16
+Title.Text             = "NEXUS"
+Title.Size             = UDim2.new(0, 200, 0, 48)
+Title.Position         = UDim2.new(0, 50, 0, 0)
+Title.TextColor3       = Color3.fromRGB(255, 255, 255)
+Title.Font             = Enum.Font.GothamBold
+Title.TextSize         = 15
 Title.BackgroundTransparency = 1
-Title.TextXAlignment      = Enum.TextXAlignment.Left
-Title.TextYAlignment      = Enum.TextYAlignment.Center
-Title.ZIndex              = 4
+Title.TextXAlignment   = Enum.TextXAlignment.Left
+Title.TextYAlignment   = Enum.TextYAlignment.Center
+Title.ZIndex           = 4
+
+local Version = Instance.new("TextLabel", Header)
+Version.Text             = "v2.0"
+Version.Size             = UDim2.new(0, 60, 0, 48)
+Version.Position         = UDim2.new(0, 116, 0, 0)
+Version.TextColor3       = Color3.fromRGB(80, 100, 160)
+Version.Font             = Enum.Font.Gotham
+Version.TextSize         = 10
+Version.BackgroundTransparency = 1
+Version.TextXAlignment   = Enum.TextXAlignment.Left
+Version.TextYAlignment   = Enum.TextYAlignment.Center
+Version.ZIndex           = 4
 
 local CloseBtn = Instance.new("TextButton", Header)
 CloseBtn.Text                = "X"
-CloseBtn.Size                = UDim2.new(0, 48, 1, 0)
-CloseBtn.Position            = UDim2.new(1, -50, 0, 0)
+CloseBtn.Size                = UDim2.new(0, 40, 1, 0)
+CloseBtn.Position            = UDim2.new(1, -44, 0, 0)
 CloseBtn.Font                = Enum.Font.GothamBold
 CloseBtn.TextColor3          = Color3.fromRGB(255, 80, 80)
-CloseBtn.TextSize            = 15
+CloseBtn.TextSize            = 14
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.ZIndex              = 5
 
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size                   = UDim2.new(0, 70, 0, 70)
+ToggleBtn.Size                   = UDim2.new(0, 56, 0, 56)
 ToggleBtn.Position               = UDim2.new(0.9, 0, 0.15, 0)
-ToggleBtn.Text                   = "我不會\n告訴"
+ToggleBtn.Text                   = "NX"
 ToggleBtn.Font                   = Enum.Font.GothamBold
-ToggleBtn.TextSize               = 11
+ToggleBtn.TextSize               = 13
 ToggleBtn.TextColor3             = Color3.fromRGB(0, 220, 255)
 ToggleBtn.BackgroundColor3       = Color3.fromRGB(8, 9, 16)
 ToggleBtn.BackgroundTransparency = 0.15
@@ -386,46 +304,44 @@ CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
 end)
 
--- [[ 5. SIDEBAR ]]
 local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size                   = UDim2.new(0, 158, 1, -64)
-Sidebar.Position               = UDim2.new(0, 5, 0, 59)
+Sidebar.Size                   = UDim2.new(0, 128, 1, -56)
+Sidebar.Position               = UDim2.new(0, 4, 0, 52)
 Sidebar.BackgroundColor3       = Color3.fromRGB(6, 7, 14)
 Sidebar.BackgroundTransparency = 0.05
 Sidebar.ZIndex                 = 3
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
 local SidebarList = Instance.new("UIListLayout", Sidebar)
-SidebarList.Padding             = UDim.new(0, 5)
+SidebarList.Padding             = UDim.new(0, 4)
 SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 SidebarList.VerticalAlignment   = Enum.VerticalAlignment.Top
 local SidebarPad = Instance.new("UIPadding", Sidebar)
-SidebarPad.PaddingTop = UDim.new(0, 10)
+SidebarPad.PaddingTop = UDim.new(0, 8)
 
--- [[ 6. CONTAINER ]]
 local Container = Instance.new("Frame", MainFrame)
-Container.Size                = UDim2.new(1, -178, 1, -72)
-Container.Position            = UDim2.new(0, 172, 0, 64)
+Container.Size                = UDim2.new(1, -146, 1, -58)
+Container.Position            = UDim2.new(0, 140, 0, 54)
 Container.BackgroundTransparency = 1
 Container.ZIndex              = 3
 
 local Pages = {}
 local function CreatePage(tabName)
     local page = Instance.new("ScrollingFrame", Container)
-    page.Size                   = UDim2.new(1, 0, 1, 0)
+    page.Size                 = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency = 1
-    page.CanvasSize             = UDim2.new(0, 0, 3.2, 0)
-    page.ScrollBarThickness     = 2
-    page.ScrollBarImageColor3   = Color3.fromRGB(0, 180, 255)
-    page.Visible                = false
-    page.ZIndex                 = 3
+    page.CanvasSize           = UDim2.new(0, 0, 3, 0)
+    page.ScrollBarThickness   = 2
+    page.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 255)
+    page.Visible              = false
+    page.ZIndex               = 3
     local layout = Instance.new("UIListLayout", page)
-    layout.Padding = UDim.new(0, 6)
+    layout.Padding = UDim.new(0, 5)
     Pages[tabName] = page
     return page
 end
 
-local AimbotPage = CreatePage("AIMBOT")
-local EspPage    = CreatePage("ESP")
+local EspPage     = CreatePage("ESP")
+local SdamagePage = CreatePage("SDAMAGE")
 
 local TabButtons = {}
 local function SwitchTab(tabName)
@@ -446,59 +362,75 @@ end
 
 local function AddTabButton(name, label)
     local btn = Instance.new("TextButton", Sidebar)
-    btn.Size             = UDim2.new(0, 140, 0, 42)
+    btn.Size             = UDim2.new(0, 112, 0, 36)
     btn.Text             = label
     btn.Font             = Enum.Font.GothamBold
-    btn.TextSize         = 12
+    btn.TextSize         = 11
     btn.TextXAlignment   = Enum.TextXAlignment.Left
     btn.TextColor3       = Color3.fromRGB(150, 150, 170)
     btn.BackgroundColor3 = Color3.fromRGB(14, 16, 28)
     btn.ZIndex           = 4
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
-    local s = Instance.new("UIStroke", btn); s.Color = Color3.fromRGB(25, 28, 48); s.Thickness = 1
-    local pad = Instance.new("UIPadding", btn); pad.PaddingLeft = UDim.new(0, 12)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    local s = Instance.new("UIStroke", btn)
+    s.Color     = Color3.fromRGB(25, 28, 48)
+    s.Thickness = 1
+    local pad = Instance.new("UIPadding", btn)
+    pad.PaddingLeft = UDim.new(0, 10)
     btn.MouseButton1Click:Connect(function() SwitchTab(name) end)
     TabButtons[name] = btn
 end
 
-AddTabButton("AIMBOT", "AIMBOT")
-AddTabButton("ESP",    "ESP")
+AddTabButton("ESP",     "  ESP")
+AddTabButton("SDAMAGE", "  SDAMAGE")
 
--- [[ 7. CONTROLS ENGINE ]]
 local function AddToggle(page, name, target, key)
     local Frame = Instance.new("Frame", page)
-    Frame.Size                   = UDim2.new(1, -6, 0, 44)
+    Frame.Size                   = UDim2.new(1, -6, 0, 40)
     Frame.BackgroundColor3       = Color3.fromRGB(10, 11, 20)
     Frame.BackgroundTransparency = 0.05
     Frame.ZIndex                 = 4
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
-    local FS = Instance.new("UIStroke", Frame); FS.Color = Color3.fromRGB(22, 26, 44); FS.Thickness = 1
+    local FS = Instance.new("UIStroke", Frame)
+    FS.Color     = Color3.fromRGB(22, 26, 44)
+    FS.Thickness = 1
 
     local TL = Instance.new("TextLabel", Frame)
-    TL.Text = name; TL.Size = UDim2.new(0.68, 0, 1, 0); TL.Position = UDim2.new(0, 12, 0, 0)
-    TL.Font = Enum.Font.GothamBold; TL.TextSize = 12; TL.TextColor3 = Color3.fromRGB(220, 220, 235)
-    TL.BackgroundTransparency = 1; TL.TextXAlignment = Enum.TextXAlignment.Left; TL.ZIndex = 5
+    TL.Text              = name
+    TL.Size              = UDim2.new(0.68, 0, 1, 0)
+    TL.Position          = UDim2.new(0, 12, 0, 0)
+    TL.Font              = Enum.Font.GothamBold
+    TL.TextSize          = 11
+    TL.TextColor3        = Color3.fromRGB(220, 220, 235)
+    TL.BackgroundTransparency = 1
+    TL.TextXAlignment    = Enum.TextXAlignment.Left
+    TL.ZIndex            = 5
 
     local Switch = Instance.new("TextButton", Frame)
-    Switch.Text = ""; Switch.Size = UDim2.new(0, 46, 0, 22)
-    Switch.Position = UDim2.new(1, -56, 0.5, -11)
-    Switch.BackgroundColor3 = Color3.fromRGB(22, 26, 44); Switch.ZIndex = 5
-    Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 11)
+    Switch.Text             = ""
+    Switch.Size             = UDim2.new(0, 42, 0, 20)
+    Switch.Position         = UDim2.new(1, -50, 0.5, -10)
+    Switch.BackgroundColor3 = Color3.fromRGB(22, 26, 44)
+    Switch.ZIndex           = 5
+    Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 10)
 
     local Circle = Instance.new("Frame", Switch)
-    Circle.Size = UDim2.new(0, 16, 0, 16); Circle.Position = UDim2.new(0, 3, 0, 3)
-    Circle.BackgroundColor3 = Color3.fromRGB(120, 120, 140); Circle.ZIndex = 6
-    Instance.new("UICorner", Circle).CornerRadius = UDim.new(0, 8)
+    Circle.Size             = UDim2.new(0, 14, 0, 14)
+    Circle.Position         = UDim2.new(0, 3, 0, 3)
+    Circle.BackgroundColor3 = Color3.fromRGB(120, 120, 140)
+    Circle.ZIndex           = 6
+    Instance.new("UICorner", Circle).CornerRadius = UDim.new(0, 7)
 
     local function Upd()
         if target[key] then
             Switch.BackgroundColor3 = Color3.fromRGB(0, 60, 170)
             Circle.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-            Circle.Position = UDim2.new(0, 27, 0, 3); FS.Color = Color3.fromRGB(0, 170, 255)
+            Circle.Position         = UDim2.new(0, 25, 0, 3)
+            FS.Color                = Color3.fromRGB(0, 170, 255)
         else
             Switch.BackgroundColor3 = Color3.fromRGB(22, 26, 44)
             Circle.BackgroundColor3 = Color3.fromRGB(120, 120, 140)
-            Circle.Position = UDim2.new(0, 3, 0, 3); FS.Color = Color3.fromRGB(22, 26, 44)
+            Circle.Position         = UDim2.new(0, 3, 0, 3)
+            FS.Color                = Color3.fromRGB(22, 26, 44)
         end
     end
     Switch.MouseButton1Click:Connect(function() target[key] = not target[key]; Upd() end)
@@ -507,39 +439,55 @@ end
 
 local function AddSlider(page, label, minVal, maxVal, targetTable, key)
     local Bg = Instance.new("Frame", page)
-    Bg.Size = UDim2.new(1, -6, 0, 54); Bg.BackgroundColor3 = Color3.fromRGB(10, 11, 20)
-    Bg.BackgroundTransparency = 0.05; Bg.ZIndex = 4
+    Bg.Size                   = UDim2.new(1, -6, 0, 50)
+    Bg.BackgroundColor3       = Color3.fromRGB(10, 11, 20)
+    Bg.BackgroundTransparency = 0.05
+    Bg.ZIndex                 = 4
     Instance.new("UICorner", Bg).CornerRadius = UDim.new(0, 8)
-    local BS = Instance.new("UIStroke", Bg); BS.Color = Color3.fromRGB(22, 26, 44); BS.Thickness = 1
+    local BS = Instance.new("UIStroke", Bg)
+    BS.Color     = Color3.fromRGB(22, 26, 44)
+    BS.Thickness = 1
 
     local LT = Instance.new("TextLabel", Bg)
-    LT.Text = label .. ":  " .. targetTable[key]; LT.Size = UDim2.new(1, 0, 0, 22)
-    LT.Position = UDim2.new(0, 12, 0, 4); LT.Font = Enum.Font.GothamMedium
-    LT.TextColor3 = Color3.fromRGB(0, 200, 255); LT.TextSize = 12
-    LT.BackgroundTransparency = 1; LT.TextXAlignment = Enum.TextXAlignment.Left; LT.ZIndex = 5
+    LT.Text             = label .. ":  " .. targetTable[key]
+    LT.Size             = UDim2.new(1, 0, 0, 20)
+    LT.Position         = UDim2.new(0, 12, 0, 4)
+    LT.Font             = Enum.Font.GothamMedium
+    LT.TextColor3       = Color3.fromRGB(0, 200, 255)
+    LT.TextSize         = 11
+    LT.BackgroundTransparency = 1
+    LT.TextXAlignment   = Enum.TextXAlignment.Left
+    LT.ZIndex           = 5
 
     local Track = Instance.new("Frame", Bg)
-    Track.Size = UDim2.new(1, -24, 0, 3); Track.Position = UDim2.new(0, 12, 0, 36)
-    Track.BackgroundColor3 = Color3.fromRGB(22, 26, 44); Track.ZIndex = 5
+    Track.Size             = UDim2.new(1, -24, 0, 3)
+    Track.Position         = UDim2.new(0, 12, 0, 34)
+    Track.BackgroundColor3 = Color3.fromRGB(22, 26, 44)
+    Track.ZIndex           = 5
     Instance.new("UICorner", Track).CornerRadius = UDim.new(0, 2)
 
     local Fill = Instance.new("Frame", Track)
-    Fill.Size = UDim2.new((targetTable[key]-minVal)/(maxVal-minVal), 0, 1, 0)
-    Fill.BackgroundColor3 = Color3.fromRGB(0, 180, 255); Fill.ZIndex = 6
+    Fill.Size             = UDim2.new((targetTable[key]-minVal)/(maxVal-minVal), 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    Fill.ZIndex           = 6
     Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 2)
 
     local Knob = Instance.new("Frame", Track)
-    Knob.Size = UDim2.new(0, 12, 0, 12); Knob.AnchorPoint = Vector2.new(0.5, 0.5)
-    Knob.Position = UDim2.new((targetTable[key]-minVal)/(maxVal-minVal), 0, 0.5, 0)
-    Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Knob.ZIndex = 7
-    Instance.new("UICorner", Knob).CornerRadius = UDim.new(0, 6)
+    Knob.Size             = UDim2.new(0, 10, 0, 10)
+    Knob.AnchorPoint      = Vector2.new(0.5, 0.5)
+    Knob.Position         = UDim2.new((targetTable[key]-minVal)/(maxVal-minVal), 0, 0.5, 0)
+    Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Knob.ZIndex           = 7
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(0, 5)
 
     local function Set(ip)
         local pct = math.clamp((ip.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
         local val = minVal + pct * (maxVal - minVal)
         val = maxVal <= 10 and (math.floor(val*10)/10) or math.floor(val)
-        targetTable[key] = val; LT.Text = label .. ":  " .. val
-        Fill.Size = UDim2.new(pct, 0, 1, 0); Knob.Position = UDim2.new(pct, 0, 0.5, 0)
+        targetTable[key]  = val
+        LT.Text           = label .. ":  " .. val
+        Fill.Size         = UDim2.new(pct, 0, 1, 0)
+        Knob.Position     = UDim2.new(pct, 0, 0.5, 0)
         Fill.BackgroundColor3 = currentAutoColor
     end
     local drag = false
@@ -562,22 +510,38 @@ end
 
 local function AddSelector(page, name, options, targetTable, key)
     local Frame = Instance.new("Frame", page)
-    Frame.Size = UDim2.new(1, -6, 0, 44); Frame.BackgroundColor3 = Color3.fromRGB(10, 11, 20)
-    Frame.BackgroundTransparency = 0.05; Frame.ZIndex = 4
+    Frame.Size                   = UDim2.new(1, -6, 0, 40)
+    Frame.BackgroundColor3       = Color3.fromRGB(10, 11, 20)
+    Frame.BackgroundTransparency = 0.05
+    Frame.ZIndex                 = 4
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
-    local FS = Instance.new("UIStroke", Frame); FS.Color = Color3.fromRGB(22, 26, 44); FS.Thickness = 1
+    local FS = Instance.new("UIStroke", Frame)
+    FS.Color     = Color3.fromRGB(22, 26, 44)
+    FS.Thickness = 1
 
     local TL = Instance.new("TextLabel", Frame)
-    TL.Text = name; TL.Size = UDim2.new(0.5, 0, 1, 0); TL.Position = UDim2.new(0, 12, 0, 0)
-    TL.Font = Enum.Font.GothamBold; TL.TextSize = 12; TL.TextColor3 = Color3.fromRGB(220, 220, 235)
-    TL.BackgroundTransparency = 1; TL.TextXAlignment = Enum.TextXAlignment.Left; TL.ZIndex = 5
+    TL.Text              = name
+    TL.Size              = UDim2.new(0.5, 0, 1, 0)
+    TL.Position          = UDim2.new(0, 12, 0, 0)
+    TL.Font              = Enum.Font.GothamBold
+    TL.TextSize          = 11
+    TL.TextColor3        = Color3.fromRGB(220, 220, 235)
+    TL.BackgroundTransparency = 1
+    TL.TextXAlignment    = Enum.TextXAlignment.Left
+    TL.ZIndex            = 5
 
     local Btn = Instance.new("TextButton", Frame)
-    Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 11; Btn.TextColor3 = Color3.fromRGB(0, 200, 255)
-    Btn.BackgroundColor3 = Color3.fromRGB(16, 19, 34); Btn.Size = UDim2.new(0, 108, 0, 26)
-    Btn.Position = UDim2.new(1, -114, 0.5, -13); Btn.ZIndex = 5
+    Btn.Font             = Enum.Font.GothamBold
+    Btn.TextSize         = 10
+    Btn.TextColor3       = Color3.fromRGB(0, 200, 255)
+    Btn.BackgroundColor3 = Color3.fromRGB(16, 19, 34)
+    Btn.Size             = UDim2.new(0, 96, 0, 24)
+    Btn.Position         = UDim2.new(1, -102, 0.5, -12)
+    Btn.ZIndex           = 5
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-    local BS = Instance.new("UIStroke", Btn); BS.Color = Color3.fromRGB(35, 40, 65); BS.Thickness = 1
+    local BS = Instance.new("UIStroke", Btn)
+    BS.Color     = Color3.fromRGB(35, 40, 65)
+    BS.Thickness = 1
 
     local idx = 1
     for i, v in ipairs(options) do if targetTable[key] == v then idx = i; break end end
@@ -586,23 +550,17 @@ local function AddSelector(page, name, options, targetTable, key)
     Upd()
 end
 
--- [[ 8. INJECT CONTROLS ]]
+AddToggle(EspPage,   "MASTER ESP",   Settings.ESP, "Enabled")
+AddToggle(EspPage,   "BOX",          Settings.ESP, "Box")
+AddToggle(EspPage,   "LINE",         Settings.ESP, "Line")
+AddSelector(EspPage, "LINE POS",     {"TOP", "CENTER", "BOTTOM"}, Settings.ESP, "LinePos")
+AddToggle(EspPage,   "SKELETON",     Settings.ESP, "Skeleton")
+AddToggle(EspPage,   "NAME TAG",     Settings.ESP, "Name")
+AddToggle(EspPage,   "HEALTH BAR",   Settings.ESP, "Health")
+AddSlider(EspPage,   "THICKNESS",    0.5, 3, Settings.ESP, "Thickness")
 
--- PAGE 1: AIMBOT
-AddToggle(AimbotPage,   "ENABLE AIMBOT",   Settings.Aimbot, "Enabled")
-AddSelector(AimbotPage, "LOCK POSITION",   {"Head", "Torso"}, Settings.Aimbot, "TargetPart")
-AddToggle(AimbotPage,   "SHOW FOV CIRCLE", Settings.Aimbot, "ShowFOV")
-AddSlider(AimbotPage,   "FOV SIZE",        10, 500,          Settings.Aimbot, "FOV")
-
--- PAGE 2: ESP
-AddToggle(EspPage,   "MASTER ESP PLAYER", Settings.ESP, "Enabled")
-AddToggle(EspPage,   "ESP BOX",           Settings.ESP, "Box")
-AddToggle(EspPage,   "ESP LINE",          Settings.ESP, "Line")
-AddSelector(EspPage, "LINE POSITION", {"TOP", "CENTER", "BOTTOM"}, Settings.ESP, "LinePos")
-AddToggle(EspPage,   "ESP SKELETON",      Settings.ESP, "Skeleton")
-AddToggle(EspPage,   "ESP NAME TAG",      Settings.ESP, "Name")
-AddToggle(EspPage,   "ESP HEALTH BAR",    Settings.ESP, "Health")
-AddSlider(EspPage,   "ESP THICKNESS",     0.5, 3,             Settings.ESP, "Thickness")
+AddToggle(SdamagePage, "ENABLE SDAMAGE", Settings.Sdamage, "Enabled")
+AddSlider(SdamagePage, "DAMAGE",         1, 999, Settings.Sdamage, "Amount")
 
 RunService.RenderStepped:Connect(function()
     MainStroke.Color     = currentAutoColor
@@ -610,4 +568,4 @@ RunService.RenderStepped:Connect(function()
     ToggleBtn.TextColor3 = currentAutoColor
 end)
 
-SwitchTab("AIMBOT")
+SwitchTab("ESP")
