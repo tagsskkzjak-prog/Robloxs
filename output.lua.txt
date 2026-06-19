@@ -1,6 +1,6 @@
 local Settings = {
-    ESP  = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
-    Aim  = { SilentAim = false, HitboxExpander = false, HitboxSize = 10 },
+    ESP = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
+    Aim = { SilentAim = false, HitboxExpander = false, HitboxSize = 10 },
     CurrentTab = "ESP"
 }
 
@@ -11,12 +11,11 @@ local LocalPlayer      = Players.LocalPlayer
 local Camera           = game.Workspace.CurrentCamera
 
 local AutoColors = {
-    Color3.fromRGB(255, 255, 255),
-    Color3.fromRGB(0,   120, 255),
-    Color3.fromRGB(255, 220, 0),
-    Color3.fromRGB(255, 40,  40),
-    Color3.fromRGB(180, 0,   255),
-    Color3.fromRGB(0,   255, 220),
+    Color3.fromRGB(0,   180, 255),
+    Color3.fromRGB(120, 0,   255),
+    Color3.fromRGB(255, 60,  180),
+    Color3.fromRGB(0,   255, 180),
+    Color3.fromRGB(255, 160, 0),
 }
 local autoColorIndex   = 1
 local autoColorTimer   = 0
@@ -24,7 +23,7 @@ local currentAutoColor = AutoColors[1]
 
 RunService.RenderStepped:Connect(function(dt)
     autoColorTimer = autoColorTimer + dt
-    if autoColorTimer >= 1.2 then
+    if autoColorTimer >= 1.4 then
         autoColorTimer   = 0
         autoColorIndex   = (autoColorIndex % #AutoColors) + 1
         currentAutoColor = AutoColors[autoColorIndex]
@@ -42,7 +41,7 @@ oldIndex = hookmetamethod(game, "__index", function(self, key)
                 if root and hum and hum.Health > 0 then
                     local sp, onScreen = Camera:WorldToViewportPoint(root.Position)
                     if onScreen then
-                        local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                        local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
                         if d < bestDist then bestDist = d; best = root end
                     end
                 end
@@ -115,12 +114,11 @@ local function CreateFullESP(player)
     end
 
     local function Update()
-        local ok, err = pcall(function()
+        local ok = pcall(function()
             local char = player.Character
             local hum  = char and char:FindFirstChild("Humanoid")
             if not char or not char:FindFirstChild("HumanoidRootPart") or not hum then
-                HideAll()
-                return
+                HideAll(); return
             end
 
             local root          = char.HumanoidRootPart
@@ -134,7 +132,7 @@ local function CreateFullESP(player)
                 if Settings.ESP.Box then
                     esp.box.Visible   = true
                     esp.box.Size      = Vector2.new(sizeX, sizeY)
-                    esp.box.Position  = Vector2.new(pos.X - sizeX/2, pos.Y - sizeY/2)
+                    esp.box.Position  = Vector2.new(pos.X - sizeX / 2, pos.Y - sizeY / 2)
                     esp.box.Color     = currentAutoColor
                     esp.box.Thickness = 0.5
                 else esp.box.Visible = false end
@@ -142,37 +140,34 @@ local function CreateFullESP(player)
                 if Settings.ESP.Line then
                     esp.line.Visible = true
                     if Settings.ESP.LinePos == "CENTER" then
-                        esp.line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+                        esp.line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
                     elseif Settings.ESP.LinePos == "BOTTOM" then
-                        esp.line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                        esp.line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                     else
-                        esp.line.From = Vector2.new(Camera.ViewportSize.X/2, 0)
+                        esp.line.From = Vector2.new(Camera.ViewportSize.X / 2, 0)
                     end
-                    esp.line.To           = Vector2.new(pos.X, pos.Y - sizeY/2)
+                    esp.line.To           = Vector2.new(pos.X, pos.Y - sizeY / 2)
                     esp.line.Color        = currentAutoColor
                     esp.line.Thickness    = 0.5
-                    esp.line.Transparency = math.clamp(1 - (distance/1200), 0.35, 0.95)
+                    esp.line.Transparency = math.clamp(1 - (distance / 1200), 0.35, 0.95)
                 else esp.line.Visible = false end
 
                 if Settings.ESP.Health then
                     local hp = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
                     esp.healthBar.Visible = true
-                    esp.healthBar.From  = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2)
-                    esp.healthBar.To    = Vector2.new(pos.X - sizeX/2 - 5, pos.Y + sizeY/2 - sizeY * hp)
-                    esp.healthBar.Color = Color3.fromRGB(math.floor(255 - 255*hp), math.floor(255*hp), 0)
+                    esp.healthBar.From    = Vector2.new(pos.X - sizeX / 2 - 5, pos.Y + sizeY / 2)
+                    esp.healthBar.To      = Vector2.new(pos.X - sizeX / 2 - 5, pos.Y + sizeY / 2 - sizeY * hp)
+                    esp.healthBar.Color   = Color3.fromRGB(math.floor(255 - 255 * hp), math.floor(255 * hp), 0)
                 else esp.healthBar.Visible = false end
 
                 if Settings.ESP.Name then
                     esp.name.Visible  = true
                     esp.name.Text     = player.Name .. " [" .. math.floor(distance) .. "m]"
-                    esp.name.Position = Vector2.new(pos.X, pos.Y - sizeY/2 - 16)
+                    esp.name.Position = Vector2.new(pos.X, pos.Y - sizeY / 2 - 16)
                     esp.name.Color    = currentAutoColor
                 else esp.name.Visible = false end
             else
-                esp.box.Visible       = false
-                esp.line.Visible      = false
-                esp.healthBar.Visible = false
-                esp.name.Visible      = false
+                HideAll()
             end
 
             local isR15 = char:FindFirstChild("UpperTorso") ~= nil
@@ -194,11 +189,11 @@ local function CreateFullESP(player)
                 local rLL    = char:FindFirstChild("RightLowerLeg")
                 local rFoot  = char:FindFirstChild("RightFoot")
                 bones = {
-                    {head,   uTorso}, {uTorso, lTorso},
-                    {uTorso, lUA},    {lUA,    lLA},    {lLA, lHand},
-                    {uTorso, rUA},    {rUA,    rLA},    {rLA, rHand},
-                    {lTorso, lUL},    {lUL,    lLL},    {lLL, lFoot},
-                    {lTorso, rUL},    {rUL,    rLL},    {rLL, rFoot},
+                    {head, uTorso}, {uTorso, lTorso},
+                    {uTorso, lUA}, {lUA, lLA}, {lLA, lHand},
+                    {uTorso, rUA}, {rUA, rLA}, {rLA, rHand},
+                    {lTorso, lUL}, {lUL, lLL}, {lLL, lFoot},
+                    {lTorso, rUL}, {rUL, rLL}, {rLL, rFoot},
                 }
             else
                 local head  = char:FindFirstChild("Head")
@@ -208,7 +203,7 @@ local function CreateFullESP(player)
                 local lLeg  = char:FindFirstChild("Left Leg")
                 local rLeg  = char:FindFirstChild("Right Leg")
                 bones = {
-                    {head,  torso},
+                    {head, torso},
                     {torso, lArm}, {torso, rArm},
                     {torso, lLeg}, {torso, rLeg},
                 }
@@ -221,7 +216,6 @@ local function CreateFullESP(player)
     end
 
     espConnections[player] = RunService.RenderStepped:Connect(Update)
-
     player.CharacterAdded:Connect(function()
         task.wait(0.5)
         CreateFullESP(player)
@@ -241,179 +235,75 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
-local spyLog     = {}
-local RemoteAddRow
-
-local function serialize(val, depth, seen)
-    depth = depth or 0
-    seen  = seen  or {}
-    local t = typeof(val)
-
-    if t == "nil"     then return "nil" end
-    if t == "boolean" then return tostring(val) end
-    if t == "number"  then
-        if val ~= val           then return "nan" end
-        if val == math.huge     then return "inf" end
-        if val == -math.huge    then return "-inf" end
-        local s = tostring(val)
-        return s
-    end
-    if t == "string" then
-        local esc = val:gsub('\\','\\\\'):gsub('"','\\"'):gsub('\n','\\n')
-        if #esc > 48 then esc = esc:sub(1,48) .. "..." end
-        return '"' .. esc .. '"'
-    end
-    if t == "Instance" then
-        local ok, p = pcall(function() return val:GetFullName() end)
-        return ok and p or ("["..tostring(val.ClassName).."]")
-    end
-    if t == "EnumItem" then
-        return tostring(val)
-    end
-    if t == "Vector3" then
-        return string.format("Vector3.new(%g, %g, %g)", val.X, val.Y, val.Z)
-    end
-    if t == "Vector2" then
-        return string.format("Vector2.new(%g, %g)", val.X, val.Y)
-    end
-    if t == "CFrame" then
-        local p = val.Position
-        return string.format("CFrame.new(%g, %g, %g)", p.X, p.Y, p.Z)
-    end
-    if t == "Color3" then
-        return string.format("Color3.fromRGB(%d, %d, %d)",
-            math.round(val.R*255), math.round(val.G*255), math.round(val.B*255))
-    end
-    if t == "UDim2" then
-        return string.format("UDim2.new(%g, %d, %g, %d)",
-            val.X.Scale, val.X.Offset, val.Y.Scale, val.Y.Offset)
-    end
-    if t == "UDim" then
-        return string.format("UDim.new(%g, %d)", val.Scale, val.Offset)
-    end
-    if t == "Rect" then
-        return string.format("Rect.new(%g, %g, %g, %g)",
-            val.Min.X, val.Min.Y, val.Max.X, val.Max.Y)
-    end
-    if t == "table" then
-        if seen[val] or depth > 3 then return "{...}" end
-        seen[val] = true
-        local parts = {}
-        local isArr = (#val > 0)
-        if isArr then
-            for i = 1, math.min(#val, 8) do
-                parts[i] = serialize(val[i], depth+1, seen)
-            end
-            if #val > 8 then parts[#parts+1] = "..." end
-        else
-            local n = 0
-            for k, v2 in pairs(val) do
-                n = n + 1
-                if n > 8 then parts[#parts+1] = "..."; break end
-                local ks = type(k)=="string" and k or ("["..serialize(k, depth+1, seen).."]")
-                parts[#parts+1] = ks .. " = " .. serialize(v2, depth+1, seen)
-            end
-        end
-        seen[val] = nil
-        return "{" .. table.concat(parts, ", ") .. "}"
-    end
-    return "["..t.."]"
-end
-
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    if method == "FireServer" or method == "InvokeServer" then
-        local ok, fullPath = pcall(function() return self:GetFullName() end)
-        if ok then
-            local args  = table.pack(...)
-            local parts = {}
-            for i = 1, args.n do
-                parts[i] = serialize(args[i])
-            end
-            local argStr  = table.concat(parts, ", ")
-            local copyTxt = fullPath .. ":" .. method .. "(" .. argStr .. ")"
-            table.insert(spyLog, copyTxt)
-            task.defer(function()
-                if RemoteAddRow then
-                    RemoteAddRow(method, self.Name, fullPath, argStr, copyTxt)
-                end
-            end)
-        end
-    end
-    return oldNamecall(self, ...)
-end)
-
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name         = "呵呵"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size                   = UDim2.new(0, 455, 0, 270)
-MainFrame.Position               = UDim2.new(0.5, -228, 0.5, -135)
-MainFrame.BackgroundColor3       = Color3.fromRGB(6, 7, 13)
-MainFrame.BackgroundTransparency = 0.0
+MainFrame.Size                   = UDim2.new(0, 420, 0, 250)
+MainFrame.Position               = UDim2.new(0.5, -210, 0.5, -125)
+MainFrame.BackgroundColor3       = Color3.fromRGB(8, 9, 18)
+MainFrame.BackgroundTransparency = 0
 MainFrame.Visible                = false
 MainFrame.Active                 = true
 MainFrame.Draggable              = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
-
-local BgImage = Instance.new("ImageLabel", MainFrame)
-BgImage.Size                 = UDim2.new(1, 0, 1, 0)
-BgImage.BackgroundTransparency = 1
-BgImage.ImageTransparency    = 0.65
-BgImage.ScaleType            = Enum.ScaleType.Crop
-BgImage.ZIndex               = 0
-BgImage.Image                = "https://img1.pic.in.th/images/078fd4be39028c992.jpg"
-Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 12)
-
-local Overlay = Instance.new("Frame", MainFrame)
-Overlay.Size                   = UDim2.new(1, 0, 1, 0)
-Overlay.BackgroundColor3       = Color3.fromRGB(4, 5, 11)
-Overlay.BackgroundTransparency = 0.38
-Overlay.ZIndex                 = 1
-Instance.new("UICorner", Overlay).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 
 local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Thickness       = 1.2
+MainStroke.Thickness       = 1.5
 MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
+local BgGrad = Instance.new("UIGradient", MainFrame)
+BgGrad.Color    = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,   Color3.fromRGB(10, 12, 24)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(6,  8,  18)),
+    ColorSequenceKeypoint.new(1,   Color3.fromRGB(10, 12, 24)),
+})
+BgGrad.Rotation = 135
+
 local Header = Instance.new("Frame", MainFrame)
-Header.Size                   = UDim2.new(1, 0, 0, 42)
-Header.BackgroundColor3       = Color3.fromRGB(7, 8, 16)
-Header.BackgroundTransparency = 0.0
+Header.Size                   = UDim2.new(1, 0, 0, 40)
+Header.BackgroundColor3       = Color3.fromRGB(8, 10, 20)
+Header.BackgroundTransparency = 0
 Header.ZIndex                 = 3
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
 
-local LogoFrame = Instance.new("Frame", Header)
-LogoFrame.Size                   = UDim2.new(0, 36, 0, 36)
-LogoFrame.Position               = UDim2.new(0, 6, 0.5, -18)
-LogoFrame.BackgroundColor3       = Color3.fromRGB(0, 90, 190)
-LogoFrame.BackgroundTransparency = 0.4
-LogoFrame.ZIndex                 = 4
-Instance.new("UICorner", LogoFrame).CornerRadius = UDim.new(0, 8)
+local HeaderLine = Instance.new("Frame", Header)
+HeaderLine.Size             = UDim2.new(1, -20, 0, 1)
+HeaderLine.Position         = UDim2.new(0, 10, 1, -1)
+HeaderLine.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+HeaderLine.BackgroundTransparency = 0.5
+HeaderLine.ZIndex           = 4
+Instance.new("UICorner", HeaderLine).CornerRadius = UDim.new(1, 0)
 
-local LogoImg = Instance.new("ImageLabel", LogoFrame)
-LogoImg.Size                  = UDim2.new(1, 0, 1, 0)
-LogoImg.BackgroundTransparency = 1
-LogoImg.ZIndex                = 5
-LogoImg.Image                 = "https://img1.pic.in.th/images/1-22.jpg"
-Instance.new("UICorner", LogoImg).CornerRadius = UDim.new(0, 8)
+local LogoCircle = Instance.new("Frame", Header)
+LogoCircle.Size             = UDim2.new(0, 26, 0, 26)
+LogoCircle.Position         = UDim2.new(0, 8, 0.5, -13)
+LogoCircle.BackgroundColor3 = Color3.fromRGB(0, 100, 220)
+LogoCircle.ZIndex           = 5
+Instance.new("UICorner", LogoCircle).CornerRadius = UDim.new(1, 0)
 
-local LogoFallback = Instance.new("TextLabel", LogoFrame)
-LogoFallback.Size                  = UDim2.new(1, 0, 1, 0)
-LogoFallback.BackgroundTransparency = 1
-LogoFallback.Text                  = "呵呵"
-LogoFallback.Font                  = Enum.Font.GothamBold
-LogoFallback.TextSize              = 10
-LogoFallback.TextColor3            = Color3.fromRGB(0, 220, 255)
-LogoFallback.ZIndex                = 4
+local LogoGrad = Instance.new("UIGradient", LogoCircle)
+LogoGrad.Color    = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 160, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)),
+})
+LogoGrad.Rotation = 45
+
+local LogoLabel = Instance.new("TextLabel", LogoCircle)
+LogoLabel.Size                  = UDim2.new(1, 0, 1, 0)
+LogoLabel.BackgroundTransparency = 1
+LogoLabel.Text                  = "呵"
+LogoLabel.Font                  = Enum.Font.GothamBold
+LogoLabel.TextSize              = 11
+LogoLabel.TextColor3            = Color3.fromRGB(255, 255, 255)
+LogoLabel.ZIndex                = 6
 
 local Title = Instance.new("TextLabel", Header)
 Title.Text             = "呵呵"
-Title.Size             = UDim2.new(0, 180, 0, 42)
-Title.Position         = UDim2.new(0, 48, 0, 0)
-Title.TextColor3       = Color3.fromRGB(255, 255, 255)
+Title.Size             = UDim2.new(0, 160, 1, 0)
+Title.Position         = UDim2.new(0, 42, 0, 0)
+Title.TextColor3       = Color3.fromRGB(230, 235, 255)
 Title.Font             = Enum.Font.GothamBold
 Title.TextSize         = 14
 Title.BackgroundTransparency = 1
@@ -421,42 +311,42 @@ Title.TextXAlignment   = Enum.TextXAlignment.Left
 Title.TextYAlignment   = Enum.TextYAlignment.Center
 Title.ZIndex           = 4
 
-local Version = Instance.new("TextLabel", Header)
-Version.Text             = "v3.0"
-Version.Size             = UDim2.new(0, 50, 0, 42)
-Version.Position         = UDim2.new(0, 106, 0, 0)
-Version.TextColor3       = Color3.fromRGB(60, 80, 140)
-Version.Font             = Enum.Font.Gotham
-Version.TextSize         = 9
-Version.BackgroundTransparency = 1
-Version.TextXAlignment   = Enum.TextXAlignment.Left
-Version.TextYAlignment   = Enum.TextYAlignment.Center
-Version.ZIndex           = 4
+local SubTitle = Instance.new("TextLabel", Header)
+SubTitle.Text             = "v3.1"
+SubTitle.Size             = UDim2.new(0, 40, 1, 0)
+SubTitle.Position         = UDim2.new(0, 108, 0, 0)
+SubTitle.TextColor3       = Color3.fromRGB(50, 70, 130)
+SubTitle.Font             = Enum.Font.Gotham
+SubTitle.TextSize         = 9
+SubTitle.BackgroundTransparency = 1
+SubTitle.TextXAlignment   = Enum.TextXAlignment.Left
+SubTitle.TextYAlignment   = Enum.TextYAlignment.Center
+SubTitle.ZIndex           = 4
 
 local CloseBtn = Instance.new("TextButton", Header)
-CloseBtn.Text                = "×"
-CloseBtn.Size                = UDim2.new(0, 36, 0, 36)
-CloseBtn.Position            = UDim2.new(1, -40, 0.5, -18)
+CloseBtn.Text                = "✕"
+CloseBtn.Size                = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position            = UDim2.new(1, -34, 0.5, -14)
 CloseBtn.Font                = Enum.Font.GothamBold
-CloseBtn.TextColor3          = Color3.fromRGB(255, 80, 80)
-CloseBtn.TextSize            = 16
-CloseBtn.BackgroundColor3    = Color3.fromRGB(40, 8, 8)
-CloseBtn.BackgroundTransparency = 0.4
+CloseBtn.TextColor3          = Color3.fromRGB(255, 90, 90)
+CloseBtn.TextSize            = 12
+CloseBtn.BackgroundColor3    = Color3.fromRGB(35, 10, 10)
+CloseBtn.BackgroundTransparency = 0.3
 CloseBtn.ZIndex              = 5
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 7)
 
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size                   = UDim2.new(0, 56, 0, 56)
-ToggleBtn.Position               = UDim2.new(0.9, 0, 0.15, 0)
+ToggleBtn.Size                   = UDim2.new(0, 48, 0, 48)
+ToggleBtn.Position               = UDim2.new(0.88, 0, 0.12, 0)
 ToggleBtn.Text                   = "呵呵"
 ToggleBtn.Font                   = Enum.Font.GothamBold
-ToggleBtn.TextSize               = 11
-ToggleBtn.TextColor3             = Color3.fromRGB(0, 220, 255)
-ToggleBtn.BackgroundColor3       = Color3.fromRGB(8, 9, 16)
-ToggleBtn.BackgroundTransparency = 0.15
+ToggleBtn.TextSize               = 10
+ToggleBtn.TextColor3             = Color3.fromRGB(0, 180, 255)
+ToggleBtn.BackgroundColor3       = Color3.fromRGB(8, 10, 20)
+ToggleBtn.BackgroundTransparency = 0.1
 ToggleBtn.Active                 = true
 ToggleBtn.Draggable              = true
-Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 50)
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
 ToggleStroke.Thickness = 1.5
 
@@ -468,22 +358,30 @@ CloseBtn.MouseButton1Click:Connect(function()
 end)
 
 local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size                   = UDim2.new(0, 116, 1, -48)
-Sidebar.Position               = UDim2.new(0, 4, 0, 44)
-Sidebar.BackgroundColor3       = Color3.fromRGB(7, 8, 16)
-Sidebar.BackgroundTransparency = 0.0
+Sidebar.Size                   = UDim2.new(0, 90, 1, -46)
+Sidebar.Position               = UDim2.new(0, 5, 0, 42)
+Sidebar.BackgroundColor3       = Color3.fromRGB(6, 8, 17)
+Sidebar.BackgroundTransparency = 0
 Sidebar.ZIndex                 = 3
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
+
+local SidebarGrad = Instance.new("UIGradient", Sidebar)
+SidebarGrad.Color    = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 10, 22)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 6, 14)),
+})
+SidebarGrad.Rotation = 90
+
 local SidebarList = Instance.new("UIListLayout", Sidebar)
-SidebarList.Padding             = UDim.new(0, 3)
+SidebarList.Padding             = UDim.new(0, 4)
 SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 SidebarList.VerticalAlignment   = Enum.VerticalAlignment.Top
 local SidebarPad = Instance.new("UIPadding", Sidebar)
-SidebarPad.PaddingTop = UDim.new(0, 7)
+SidebarPad.PaddingTop = UDim.new(0, 8)
 
 local Container = Instance.new("Frame", MainFrame)
-Container.Size                = UDim2.new(1, -130, 1, -50)
-Container.Position            = UDim2.new(0, 124, 0, 46)
+Container.Size                = UDim2.new(1, -104, 1, -48)
+Container.Position            = UDim2.new(0, 100, 0, 44)
 Container.BackgroundTransparency = 1
 Container.ClipsDescendants    = true
 Container.ZIndex              = 3
@@ -495,23 +393,20 @@ local function CreatePage(tabName)
     page.BackgroundTransparency = 1
     page.CanvasSize           = UDim2.new(0, 0, 3, 0)
     page.ScrollBarThickness   = 2
-    page.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 255)
+    page.ScrollBarImageColor3 = Color3.fromRGB(0, 140, 255)
     page.Visible              = false
     page.ZIndex               = 3
     local layout = Instance.new("UIListLayout", page)
-    layout.Padding = UDim.new(0, 5)
+    layout.Padding = UDim.new(0, 4)
+    local pad = Instance.new("UIPadding", page)
+    pad.PaddingTop   = UDim.new(0, 4)
+    pad.PaddingRight = UDim.new(0, 4)
     Pages[tabName] = page
     return page, layout
 end
 
-local EspPage,  EspLayout  = CreatePage("ESP")
-local AimPage,  AimLayout  = CreatePage("AIM")
-local SpyPage,  SpyLayout  = CreatePage("SPY")
-
-SpyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
-SpyLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    SpyPage.CanvasSize = UDim2.new(0, 0, 0, SpyLayout.AbsoluteContentSize.Y + 10)
-end)
+local EspPage, EspLayout = CreatePage("ESP")
+local AimPage, AimLayout = CreatePage("AIM")
 
 local TabButtons = {}
 local function SwitchTab(tabName)
@@ -521,153 +416,173 @@ local function SwitchTab(tabName)
     end
     for name, btn in pairs(TabButtons) do
         if name == tabName then
-            btn.BackgroundColor3 = Color3.fromRGB(0, 90, 210)
-            btn.TextColor3       = Color3.fromRGB(255, 255, 255)
+            btn.BackgroundColor3       = Color3.fromRGB(0, 80, 200)
+            btn.TextColor3             = Color3.fromRGB(255, 255, 255)
+            local s = btn:FindFirstChildOfClass("UIStroke")
+            if s then s.Color = Color3.fromRGB(0, 140, 255) end
         else
-            btn.BackgroundColor3 = Color3.fromRGB(14, 16, 28)
-            btn.TextColor3       = Color3.fromRGB(150, 150, 170)
+            btn.BackgroundColor3       = Color3.fromRGB(10, 12, 24)
+            btn.TextColor3             = Color3.fromRGB(110, 115, 145)
+            local s = btn:FindFirstChildOfClass("UIStroke")
+            if s then s.Color = Color3.fromRGB(20, 22, 40) end
         end
     end
 end
 
-local function AddTabButton(name, label)
+local function AddTabButton(name, icon, label)
     local btn = Instance.new("TextButton", Sidebar)
-    btn.Size             = UDim2.new(0, 100, 0, 32)
-    btn.Text             = label
+    btn.Size             = UDim2.new(0, 76, 0, 34)
+    btn.Text             = icon .. "  " .. label
     btn.Font             = Enum.Font.GothamBold
     btn.TextSize         = 10
     btn.TextXAlignment   = Enum.TextXAlignment.Left
-    btn.TextColor3       = Color3.fromRGB(130, 130, 155)
-    btn.BackgroundColor3 = Color3.fromRGB(12, 14, 24)
+    btn.TextColor3       = Color3.fromRGB(110, 115, 145)
+    btn.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
     btn.ZIndex           = 4
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", btn)
-    s.Color     = Color3.fromRGB(22, 25, 44)
+    s.Color     = Color3.fromRGB(20, 22, 40)
     s.Thickness = 1
     local pad = Instance.new("UIPadding", btn)
-    pad.PaddingLeft = UDim.new(0, 10)
+    pad.PaddingLeft = UDim.new(0, 8)
     btn.MouseButton1Click:Connect(function() SwitchTab(name) end)
     TabButtons[name] = btn
 end
 
-AddTabButton("ESP", "  ESP")
-AddTabButton("AIM", "  AIM")
-AddTabButton("SPY", "  SPY")
+AddTabButton("ESP", "◈", "ESP")
+AddTabButton("AIM", "◎", "AIM")
+
+local function MakeCard(page)
+    local f = Instance.new("Frame", page)
+    f.Size                   = UDim2.new(1, -2, 0, 38)
+    f.BackgroundColor3       = Color3.fromRGB(10, 12, 23)
+    f.BackgroundTransparency = 0
+    f.ZIndex                 = 4
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
+    local s = Instance.new("UIStroke", f)
+    s.Color     = Color3.fromRGB(18, 22, 42)
+    s.Thickness = 1
+    return f
+end
 
 local function AddToggle(page, name, target, key)
-    local Frame = Instance.new("Frame", page)
-    Frame.Size                   = UDim2.new(1, -6, 0, 40)
-    Frame.BackgroundColor3       = Color3.fromRGB(10, 11, 20)
-    Frame.BackgroundTransparency = 0.05
-    Frame.ZIndex                 = 4
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
-    local FS = Instance.new("UIStroke", Frame)
-    FS.Color     = Color3.fromRGB(22, 26, 44)
-    FS.Thickness = 1
+    local f = MakeCard(page)
 
-    local TL = Instance.new("TextLabel", Frame)
+    local accent = Instance.new("Frame", f)
+    accent.Size             = UDim2.new(0, 3, 0, 18)
+    accent.Position         = UDim2.new(0, 0, 0.5, -9)
+    accent.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+    accent.ZIndex           = 5
+    Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+
+    local TL = Instance.new("TextLabel", f)
     TL.Text              = name
-    TL.Size              = UDim2.new(0.68, 0, 1, 0)
+    TL.Size              = UDim2.new(0.65, 0, 1, 0)
     TL.Position          = UDim2.new(0, 12, 0, 0)
     TL.Font              = Enum.Font.GothamBold
-    TL.TextSize          = 11
-    TL.TextColor3        = Color3.fromRGB(220, 220, 235)
+    TL.TextSize          = 10
+    TL.TextColor3        = Color3.fromRGB(200, 205, 225)
     TL.BackgroundTransparency = 1
     TL.TextXAlignment    = Enum.TextXAlignment.Left
     TL.ZIndex            = 5
 
-    local Switch = Instance.new("TextButton", Frame)
-    Switch.Text             = ""
-    Switch.Size             = UDim2.new(0, 42, 0, 20)
-    Switch.Position         = UDim2.new(1, -50, 0.5, -10)
-    Switch.BackgroundColor3 = Color3.fromRGB(22, 26, 44)
-    Switch.ZIndex           = 5
-    Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 10)
-
-    local Circle = Instance.new("Frame", Switch)
-    Circle.Size             = UDim2.new(0, 14, 0, 14)
-    Circle.Position         = UDim2.new(0, 3, 0, 3)
-    Circle.BackgroundColor3 = Color3.fromRGB(120, 120, 140)
-    Circle.ZIndex           = 6
-    Instance.new("UICorner", Circle).CornerRadius = UDim.new(0, 7)
-
-    local function Upd()
-        if target[key] then
-            Switch.BackgroundColor3 = Color3.fromRGB(0, 60, 170)
-            Circle.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-            Circle.Position         = UDim2.new(0, 25, 0, 3)
-            FS.Color                = Color3.fromRGB(0, 170, 255)
-        else
-            Switch.BackgroundColor3 = Color3.fromRGB(22, 26, 44)
-            Circle.BackgroundColor3 = Color3.fromRGB(120, 120, 140)
-            Circle.Position         = UDim2.new(0, 3, 0, 3)
-            FS.Color                = Color3.fromRGB(22, 26, 44)
-        end
-    end
-    Switch.MouseButton1Click:Connect(function() target[key] = not target[key]; Upd() end)
-    Upd()
-end
-
-local function AddSlider(page, label, minVal, maxVal, targetTable, key)
-    local Bg = Instance.new("Frame", page)
-    Bg.Size                   = UDim2.new(1, -6, 0, 50)
-    Bg.BackgroundColor3       = Color3.fromRGB(10, 11, 20)
-    Bg.BackgroundTransparency = 0.05
-    Bg.ZIndex                 = 4
-    Instance.new("UICorner", Bg).CornerRadius = UDim.new(0, 8)
-    local BS = Instance.new("UIStroke", Bg)
-    BS.Color     = Color3.fromRGB(22, 26, 44)
-    BS.Thickness = 1
-
-    local LT = Instance.new("TextLabel", Bg)
-    LT.Text             = label .. ":  " .. targetTable[key]
-    LT.Size             = UDim2.new(1, 0, 0, 20)
-    LT.Position         = UDim2.new(0, 12, 0, 4)
-    LT.Font             = Enum.Font.GothamMedium
-    LT.TextColor3       = Color3.fromRGB(0, 200, 255)
-    LT.TextSize         = 11
-    LT.BackgroundTransparency = 1
-    LT.TextXAlignment   = Enum.TextXAlignment.Left
-    LT.ZIndex           = 5
-
-    local Track = Instance.new("Frame", Bg)
-    Track.Size             = UDim2.new(1, -24, 0, 3)
-    Track.Position         = UDim2.new(0, 12, 0, 34)
-    Track.BackgroundColor3 = Color3.fromRGB(22, 26, 44)
+    local Track = Instance.new("Frame", f)
+    Track.Size             = UDim2.new(0, 36, 0, 18)
+    Track.Position         = UDim2.new(1, -44, 0.5, -9)
+    Track.BackgroundColor3 = target[key] and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
     Track.ZIndex           = 5
-    Instance.new("UICorner", Track).CornerRadius = UDim.new(0, 2)
-
-    local Fill = Instance.new("Frame", Track)
-    Fill.Size             = UDim2.new((targetTable[key]-minVal)/(maxVal-minVal), 0, 1, 0)
-    Fill.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
-    Fill.ZIndex           = 6
-    Instance.new("UICorner", Fill).CornerRadius = UDim.new(0, 2)
+    Instance.new("UICorner", Track).CornerRadius = UDim.new(1, 0)
 
     local Knob = Instance.new("Frame", Track)
-    Knob.Size             = UDim2.new(0, 10, 0, 10)
+    Knob.Size             = UDim2.new(0, 13, 0, 13)
+    Knob.Position         = target[key] and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+    Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Knob.ZIndex           = 6
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+
+    local function Refresh()
+        local on = target[key]
+        Track.BackgroundColor3 = on and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
+        Knob.Position = on and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+        accent.BackgroundColor3 = on and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(40, 44, 70)
+    end
+
+    Track.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            target[key] = not target[key]
+            Refresh()
+        end
+    end)
+    Refresh()
+end
+
+local function AddSlider(page, name, minVal, maxVal, target, key)
+    local f = MakeCard(page)
+    f.Size = UDim2.new(1, -2, 0, 46)
+
+    local accent = Instance.new("Frame", f)
+    accent.Size             = UDim2.new(0, 3, 0, 18)
+    accent.Position         = UDim2.new(0, 0, 0, 10)
+    accent.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    accent.ZIndex           = 5
+    Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+
+    local LT = Instance.new("TextLabel", f)
+    LT.Text              = name .. ":  " .. target[key]
+    LT.Size              = UDim2.new(1, -12, 0, 20)
+    LT.Position          = UDim2.new(0, 12, 0, 4)
+    LT.Font              = Enum.Font.GothamBold
+    LT.TextSize          = 10
+    LT.TextColor3        = Color3.fromRGB(200, 205, 225)
+    LT.BackgroundTransparency = 1
+    LT.TextXAlignment    = Enum.TextXAlignment.Left
+    LT.ZIndex            = 5
+
+    local TrackBg = Instance.new("Frame", f)
+    TrackBg.Size             = UDim2.new(1, -18, 0, 6)
+    TrackBg.Position         = UDim2.new(0, 9, 0, 32)
+    TrackBg.BackgroundColor3 = Color3.fromRGB(18, 20, 38)
+    TrackBg.ZIndex           = 5
+    Instance.new("UICorner", TrackBg).CornerRadius = UDim.new(1, 0)
+
+    local Fill = Instance.new("Frame", TrackBg)
+    local pctInit = (target[key] - minVal) / (maxVal - minVal)
+    Fill.Size             = UDim2.new(pctInit, 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+    Fill.ZIndex           = 6
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+
+    local FillGrad = Instance.new("UIGradient", Fill)
+    FillGrad.Color    = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 180, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)),
+    })
+    FillGrad.Rotation = 0
+
+    local Knob = Instance.new("Frame", TrackBg)
+    Knob.Size             = UDim2.new(0, 11, 0, 11)
     Knob.AnchorPoint      = Vector2.new(0.5, 0.5)
-    Knob.Position         = UDim2.new((targetTable[key]-minVal)/(maxVal-minVal), 0, 0.5, 0)
+    Knob.Position         = UDim2.new(pctInit, 0, 0.5, 0)
     Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Knob.ZIndex           = 7
-    Instance.new("UICorner", Knob).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
 
     local function Set(ip)
-        local pct = math.clamp((ip.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
+        local pct = math.clamp((ip.X - TrackBg.AbsolutePosition.X) / TrackBg.AbsoluteSize.X, 0, 1)
         local val = minVal + pct * (maxVal - minVal)
-        val = maxVal <= 10 and (math.floor(val*10)/10) or math.floor(val)
-        targetTable[key]      = val
-        LT.Text               = label .. ":  " .. val
-        Fill.Size             = UDim2.new(pct, 0, 1, 0)
-        Knob.Position         = UDim2.new(pct, 0, 0.5, 0)
-        Fill.BackgroundColor3 = currentAutoColor
+        val = maxVal <= 10 and (math.floor(val * 10) / 10) or math.floor(val)
+        target[key]   = val
+        LT.Text       = name .. ":  " .. val
+        Fill.Size     = UDim2.new(pct, 0, 1, 0)
+        Knob.Position = UDim2.new(pct, 0, 0.5, 0)
     end
     local drag = false
-    Bg.InputBegan:Connect(function(i)
+    TrackBg.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
             drag = true; Set(i.Position)
         end
     end)
-    Bg.InputEnded:Connect(function(i)
+    TrackBg.InputEnded:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
             drag = false
         end
@@ -679,210 +594,68 @@ local function AddSlider(page, label, minVal, maxVal, targetTable, key)
     end)
 end
 
-local function AddSelector(page, name, options, targetTable, key)
-    local Frame = Instance.new("Frame", page)
-    Frame.Size                   = UDim2.new(1, -6, 0, 40)
-    Frame.BackgroundColor3       = Color3.fromRGB(10, 11, 20)
-    Frame.BackgroundTransparency = 0.05
-    Frame.ZIndex                 = 4
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
-    local FS = Instance.new("UIStroke", Frame)
-    FS.Color     = Color3.fromRGB(22, 26, 44)
-    FS.Thickness = 1
+local function AddSelector(page, name, options, target, key)
+    local f = MakeCard(page)
 
-    local TL = Instance.new("TextLabel", Frame)
+    local accent = Instance.new("Frame", f)
+    accent.Size             = UDim2.new(0, 3, 0, 18)
+    accent.Position         = UDim2.new(0, 0, 0.5, -9)
+    accent.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+    accent.ZIndex           = 5
+    Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+
+    local TL = Instance.new("TextLabel", f)
     TL.Text              = name
-    TL.Size              = UDim2.new(0.5, 0, 1, 0)
+    TL.Size              = UDim2.new(0.48, 0, 1, 0)
     TL.Position          = UDim2.new(0, 12, 0, 0)
     TL.Font              = Enum.Font.GothamBold
-    TL.TextSize          = 11
-    TL.TextColor3        = Color3.fromRGB(220, 220, 235)
+    TL.TextSize          = 10
+    TL.TextColor3        = Color3.fromRGB(200, 205, 225)
     TL.BackgroundTransparency = 1
     TL.TextXAlignment    = Enum.TextXAlignment.Left
     TL.ZIndex            = 5
 
-    local Btn = Instance.new("TextButton", Frame)
+    local Btn = Instance.new("TextButton", f)
     Btn.Font             = Enum.Font.GothamBold
-    Btn.TextSize         = 10
-    Btn.TextColor3       = Color3.fromRGB(0, 200, 255)
-    Btn.BackgroundColor3 = Color3.fromRGB(16, 19, 34)
-    Btn.Size             = UDim2.new(0, 96, 0, 24)
-    Btn.Position         = UDim2.new(1, -102, 0.5, -12)
+    Btn.TextSize         = 9
+    Btn.TextColor3       = Color3.fromRGB(0, 180, 255)
+    Btn.BackgroundColor3 = Color3.fromRGB(10, 14, 30)
+    Btn.Size             = UDim2.new(0, 84, 0, 22)
+    Btn.Position         = UDim2.new(1, -90, 0.5, -11)
     Btn.ZIndex           = 5
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
     local BS = Instance.new("UIStroke", Btn)
-    BS.Color     = Color3.fromRGB(35, 40, 65)
+    BS.Color     = Color3.fromRGB(0, 80, 180)
     BS.Thickness = 1
 
     local idx = 1
-    for i, v in ipairs(options) do if targetTable[key] == v then idx = i; break end end
-    local function Upd() targetTable[key] = options[idx]; Btn.Text = "< " .. options[idx] .. " >" end
+    for i, v in ipairs(options) do if target[key] == v then idx = i break end end
+    local function Upd() target[key] = options[idx]; Btn.Text = "‹ " .. options[idx] .. " ›" end
     Btn.MouseButton1Click:Connect(function() idx = (idx % #options) + 1; Upd() end)
     Upd()
 end
 
 AddToggle(EspPage,   "MASTER ESP",   Settings.ESP, "Enabled")
 AddToggle(EspPage,   "BOX",          Settings.ESP, "Box")
-AddToggle(EspPage,   "LINE",         Settings.ESP, "Line")
-AddSelector(EspPage, "LINE POS",     {"TOP", "CENTER", "BOTTOM"}, Settings.ESP, "LinePos")
 AddToggle(EspPage,   "SKELETON",     Settings.ESP, "Skeleton")
 AddToggle(EspPage,   "NAME TAG",     Settings.ESP, "Name")
 AddToggle(EspPage,   "HEALTH BAR",   Settings.ESP, "Health")
+AddToggle(EspPage,   "TRACER LINE",  Settings.ESP, "Line")
+AddSelector(EspPage, "LINE POS",     {"TOP", "CENTER", "BOTTOM"}, Settings.ESP, "LinePos")
 AddSlider(EspPage,   "THICKNESS",    0.5, 3, Settings.ESP, "Thickness")
 
 AddToggle(AimPage,  "SILENT AIM",      Settings.Aim, "SilentAim")
 AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander")
 AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize")
 
-local SpyHeaderRow = Instance.new("Frame", SpyPage)
-SpyHeaderRow.Size             = UDim2.new(1, -6, 0, 30)
-SpyHeaderRow.BackgroundColor3 = Color3.fromRGB(10, 12, 22)
-SpyHeaderRow.BackgroundTransparency = 0.0
-SpyHeaderRow.ZIndex           = 4
-Instance.new("UICorner", SpyHeaderRow).CornerRadius = UDim.new(0, 7)
-local SpyHeaderStroke = Instance.new("UIStroke", SpyHeaderRow)
-SpyHeaderStroke.Color     = Color3.fromRGB(0, 80, 160)
-SpyHeaderStroke.Thickness = 1
-
-local SpyTitleDot = Instance.new("Frame", SpyHeaderRow)
-SpyTitleDot.Size             = UDim2.new(0, 6, 0, 6)
-SpyTitleDot.Position         = UDim2.new(0, 10, 0.5, -3)
-SpyTitleDot.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-SpyTitleDot.ZIndex           = 5
-Instance.new("UICorner", SpyTitleDot).CornerRadius = UDim.new(1, 0)
-
-local SpyTitleLabel = Instance.new("TextLabel", SpyHeaderRow)
-SpyTitleLabel.Text              = "REMOTE SPY"
-SpyTitleLabel.Size              = UDim2.new(0.5, 0, 1, 0)
-SpyTitleLabel.Position          = UDim2.new(0, 22, 0, 0)
-SpyTitleLabel.Font              = Enum.Font.GothamBold
-SpyTitleLabel.TextSize          = 10
-SpyTitleLabel.TextColor3        = Color3.fromRGB(180, 200, 230)
-SpyTitleLabel.BackgroundTransparency = 1
-SpyTitleLabel.TextXAlignment    = Enum.TextXAlignment.Left
-SpyTitleLabel.ZIndex            = 5
-
-local CopyAllBtn = Instance.new("TextButton", SpyHeaderRow)
-CopyAllBtn.Text             = "COPY ALL"
-CopyAllBtn.Size             = UDim2.new(0, 62, 0, 20)
-CopyAllBtn.Position         = UDim2.new(1, -128, 0.5, -10)
-CopyAllBtn.Font             = Enum.Font.GothamBold
-CopyAllBtn.TextSize         = 9
-CopyAllBtn.TextColor3       = Color3.fromRGB(0, 255, 160)
-CopyAllBtn.BackgroundColor3 = Color3.fromRGB(0, 35, 18)
-CopyAllBtn.ZIndex           = 5
-Instance.new("UICorner", CopyAllBtn).CornerRadius = UDim.new(0, 5)
-
-local ClearSpyBtn = Instance.new("TextButton", SpyHeaderRow)
-ClearSpyBtn.Text             = "CLEAR"
-ClearSpyBtn.Size             = UDim2.new(0, 48, 0, 20)
-ClearSpyBtn.Position         = UDim2.new(1, -54, 0.5, -10)
-ClearSpyBtn.Font             = Enum.Font.GothamBold
-ClearSpyBtn.TextSize         = 9
-ClearSpyBtn.TextColor3       = Color3.fromRGB(255, 80, 80)
-ClearSpyBtn.BackgroundColor3 = Color3.fromRGB(35, 8, 8)
-ClearSpyBtn.ZIndex           = 5
-Instance.new("UICorner", ClearSpyBtn).CornerRadius = UDim.new(0, 5)
-
-local spyCount = 0
-
-RemoteAddRow = function(method, name, fullPath, argStr, copyTxt)
-    spyCount = spyCount + 1
-    SpyTitleLabel.Text = "REMOTE SPY  ·  " .. spyCount
-
-    local row = Instance.new("Frame", SpyPage)
-    row.Size             = UDim2.new(1, -6, 0, 52)
-    row.BackgroundColor3 = Color3.fromRGB(8, 10, 18)
-    row.BackgroundTransparency = 0.05
-    row.ZIndex           = 4
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 7)
-    local rs = Instance.new("UIStroke", row)
-    rs.Color     = Color3.fromRGB(0, 80, 180)
-    rs.Thickness = 0.8
-
-    local methodTag = Instance.new("TextLabel", row)
-    methodTag.Text       = "[" .. method .. "]"
-    methodTag.Size       = UDim2.new(0, 130, 0, 18)
-    methodTag.Position   = UDim2.new(0, 8, 0, 4)
-    methodTag.Font       = Enum.Font.GothamBold
-    methodTag.TextSize   = 10
-    methodTag.TextColor3 = method == "FireServer" and Color3.fromRGB(255, 180, 0) or Color3.fromRGB(180, 100, 255)
-    methodTag.BackgroundTransparency = 1
-    methodTag.TextXAlignment = Enum.TextXAlignment.Left
-    methodTag.ZIndex     = 5
-
-    local nameLabel = Instance.new("TextLabel", row)
-    nameLabel.Text       = name
-    nameLabel.Size       = UDim2.new(1, -116, 0, 16)
-    nameLabel.Position   = UDim2.new(0, 8, 0, 20)
-    nameLabel.Font       = Enum.Font.GothamBold
-    nameLabel.TextSize   = 10
-    nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.TextTruncate   = Enum.TextTruncate.AtEnd
-    nameLabel.ZIndex     = 5
-
-    local argLabel = Instance.new("TextLabel", row)
-    argLabel.Text       = argStr == "" and "(no args)" or argStr
-    argLabel.Size       = UDim2.new(1, -116, 0, 14)
-    argLabel.Position   = UDim2.new(0, 8, 0, 36)
-    argLabel.Font       = Enum.Font.Gotham
-    argLabel.TextSize   = 9
-    argLabel.TextColor3 = Color3.fromRGB(100, 130, 180)
-    argLabel.BackgroundTransparency = 1
-    argLabel.TextXAlignment = Enum.TextXAlignment.Left
-    argLabel.TextTruncate   = Enum.TextTruncate.AtEnd
-    argLabel.ZIndex     = 5
-
-    local copyBtn = Instance.new("TextButton", row)
-    copyBtn.Text             = "COPY"
-    copyBtn.Size             = UDim2.new(0, 48, 0, 20)
-    copyBtn.Position         = UDim2.new(1, -56, 0.5, -10)
-    copyBtn.Font             = Enum.Font.GothamBold
-    copyBtn.TextSize         = 9
-    copyBtn.TextColor3       = Color3.fromRGB(0, 200, 255)
-    copyBtn.BackgroundColor3 = Color3.fromRGB(0, 30, 60)
-    copyBtn.ZIndex           = 5
-    Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 5)
-
-    copyBtn.MouseButton1Click:Connect(function()
-        setclipboard(copyTxt)
-        copyBtn.Text       = "OK!"
-        copyBtn.TextColor3 = Color3.fromRGB(0, 255, 100)
-        task.delay(1.2, function()
-            copyBtn.Text       = "COPY"
-            copyBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
-        end)
-    end)
-end
-
-CopyAllBtn.MouseButton1Click:Connect(function()
-    if #spyLog == 0 then return end
-    setclipboard(table.concat(spyLog, "\n"))
-    CopyAllBtn.Text       = "COPIED!"
-    CopyAllBtn.TextColor3 = Color3.fromRGB(0, 255, 100)
-    task.delay(1.5, function()
-        CopyAllBtn.Text       = "COPY ALL"
-        CopyAllBtn.TextColor3 = Color3.fromRGB(0, 255, 160)
-    end)
-end)
-
-ClearSpyBtn.MouseButton1Click:Connect(function()
-    for _, child in pairs(SpyPage:GetChildren()) do
-        if child:IsA("Frame") and child ~= SpyHeaderRow then
-            child:Destroy()
-        end
-    end
-    spyCount           = 0
-    spyLog             = {}
-    SpyTitleLabel.Text = "REMOTE SPY"
-end)
-
 RunService.RenderStepped:Connect(function()
-    MainStroke.Color     = currentAutoColor
-    ToggleStroke.Color   = currentAutoColor
-    ToggleBtn.TextColor3 = currentAutoColor
+    MainStroke.Color   = currentAutoColor
+    ToggleStroke.Color = currentAutoColor
+    HeaderLine.BackgroundColor3 = currentAutoColor
+    LogoGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, currentAutoColor),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)),
+    })
 end)
 
 SwitchTab("ESP")
