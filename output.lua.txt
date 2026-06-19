@@ -221,38 +221,7 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
-local function valToStr(v)
-    local t = typeof(v)
-    if t == "string"  then return '"' .. v:sub(1, 40) .. '"' end
-    if t == "number"  then return tostring(math.floor(v * 100) / 100) end
-    if t == "boolean" then return tostring(v) end
-    if t == "nil"     then return "nil" end
-    if t == "Instance" then return v:GetFullName() end
-    if t == "Vector3"  then return "V3(" .. math.floor(v.X) .. "," .. math.floor(v.Y) .. "," .. math.floor(v.Z) .. ")" end
-    if t == "CFrame"   then return "CFrame" end
-    return tostring(v)
-end
-
-local SpyAddEntry
-
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    if method == "FireServer" or method == "InvokeServer" then
-        local args = {...}
-        local argParts = {}
-        for _, v in ipairs(args) do
-            table.insert(argParts, valToStr(v))
-        end
-        local argStr   = table.concat(argParts, ", ")
-        local fullPath = pcall(function() return self:GetFullName() end) and self:GetFullName() or "?"
-        local copyText = fullPath .. ":" .. method .. "(" .. argStr .. ")"
-        if SpyAddEntry then
-            SpyAddEntry(method, fullPath, argStr, copyText)
-        end
-    end
-    return oldNamecall(self, ...)
-end)
+local RemoteAddRow
 
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name         = "呵呵"
@@ -460,7 +429,7 @@ end
 
 AddTabButton("ESP",     "  ESP")
 AddTabButton("SDAMAGE", "  SDAMAGE")
-AddTabButton("SPY",     "  REMOTE SPY")
+AddTabButton("SPY",     "  REMOTE EVENT")
 
 local function AddToggle(page, name, target, key)
     local Frame = Instance.new("Frame", page)
@@ -641,41 +610,40 @@ AddSlider(EspPage,   "THICKNESS",    0.5, 3, Settings.ESP, "Thickness")
 AddToggle(SdamagePage, "ENABLE SDAMAGE", Settings.Sdamage, "Enabled")
 AddSlider(SdamagePage, "DAMAGE",         1, 999, Settings.Sdamage, "Amount")
 
-local SpyClearRow = Instance.new("Frame", SpyPage)
-SpyClearRow.Size             = UDim2.new(1, -6, 0, 34)
-SpyClearRow.BackgroundColor3 = Color3.fromRGB(10, 11, 20)
-SpyClearRow.BackgroundTransparency = 0.05
-SpyClearRow.ZIndex           = 4
-Instance.new("UICorner", SpyClearRow).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", SpyClearRow).Color        = Color3.fromRGB(22, 26, 44)
+local RemoteHeaderRow = Instance.new("Frame", SpyPage)
+RemoteHeaderRow.Size             = UDim2.new(1, -6, 0, 34)
+RemoteHeaderRow.BackgroundColor3 = Color3.fromRGB(10, 11, 20)
+RemoteHeaderRow.BackgroundTransparency = 0.05
+RemoteHeaderRow.ZIndex           = 4
+Instance.new("UICorner", RemoteHeaderRow).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", RemoteHeaderRow).Color        = Color3.fromRGB(22, 26, 44)
 
-local SpyCountLabel = Instance.new("TextLabel", SpyClearRow)
-SpyCountLabel.Text              = "REMOTE SPY — 0 entries"
-SpyCountLabel.Size              = UDim2.new(0.6, 0, 1, 0)
-SpyCountLabel.Position          = UDim2.new(0, 10, 0, 0)
-SpyCountLabel.Font              = Enum.Font.GothamBold
-SpyCountLabel.TextSize          = 11
-SpyCountLabel.TextColor3        = Color3.fromRGB(0, 200, 255)
-SpyCountLabel.BackgroundTransparency = 1
-SpyCountLabel.TextXAlignment    = Enum.TextXAlignment.Left
-SpyCountLabel.ZIndex            = 5
+local RemoteCountLabel = Instance.new("TextLabel", RemoteHeaderRow)
+RemoteCountLabel.Text              = "REMOTE EVENT — press SCAN"
+RemoteCountLabel.Size              = UDim2.new(0.6, 0, 1, 0)
+RemoteCountLabel.Position          = UDim2.new(0, 10, 0, 0)
+RemoteCountLabel.Font              = Enum.Font.GothamBold
+RemoteCountLabel.TextSize          = 11
+RemoteCountLabel.TextColor3        = Color3.fromRGB(0, 200, 255)
+RemoteCountLabel.BackgroundTransparency = 1
+RemoteCountLabel.TextXAlignment    = Enum.TextXAlignment.Left
+RemoteCountLabel.ZIndex            = 5
 
-local SpyClearBtn = Instance.new("TextButton", SpyClearRow)
-SpyClearBtn.Text             = "CLEAR"
-SpyClearBtn.Size             = UDim2.new(0, 60, 0, 22)
-SpyClearBtn.Position         = UDim2.new(1, -68, 0.5, -11)
-SpyClearBtn.Font             = Enum.Font.GothamBold
-SpyClearBtn.TextSize         = 10
-SpyClearBtn.TextColor3       = Color3.fromRGB(255, 80, 80)
-SpyClearBtn.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
-SpyClearBtn.ZIndex           = 5
-Instance.new("UICorner", SpyClearBtn).CornerRadius = UDim.new(0, 6)
+local ScanBtn = Instance.new("TextButton", RemoteHeaderRow)
+ScanBtn.Text             = "SCAN"
+ScanBtn.Size             = UDim2.new(0, 54, 0, 22)
+ScanBtn.Position         = UDim2.new(1, -62, 0.5, -11)
+ScanBtn.Font             = Enum.Font.GothamBold
+ScanBtn.TextSize         = 10
+ScanBtn.TextColor3       = Color3.fromRGB(0, 255, 160)
+ScanBtn.BackgroundColor3 = Color3.fromRGB(0, 40, 20)
+ScanBtn.ZIndex           = 5
+Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
 
-local spyEntryCount = 0
-
-SpyAddEntry = function(method, fullPath, argStr, copyText)
-    spyEntryCount = spyEntryCount + 1
-    SpyCountLabel.Text = "REMOTE SPY — " .. spyEntryCount .. " entries"
+RemoteAddRow = function(remote)
+    local kind     = remote.ClassName
+    local fullPath = remote:GetFullName()
+    local name     = remote.Name
 
     local row = Instance.new("Frame", SpyPage)
     row.Size             = UDim2.new(1, -6, 0, 52)
@@ -687,45 +655,56 @@ SpyAddEntry = function(method, fullPath, argStr, copyText)
     rs.Color     = Color3.fromRGB(0, 80, 180)
     rs.Thickness = 0.8
 
-    local methodTag = Instance.new("TextLabel", row)
-    methodTag.Text       = "[" .. method .. "]"
-    methodTag.Size       = UDim2.new(0, 120, 0, 18)
-    methodTag.Position   = UDim2.new(0, 8, 0, 4)
-    methodTag.Font       = Enum.Font.GothamBold
-    methodTag.TextSize   = 10
-    methodTag.TextColor3 = method == "FireServer" and Color3.fromRGB(255, 180, 0) or Color3.fromRGB(180, 100, 255)
-    methodTag.BackgroundTransparency = 1
-    methodTag.TextXAlignment = Enum.TextXAlignment.Left
-    methodTag.ZIndex     = 5
+    local kindTag = Instance.new("TextLabel", row)
+    kindTag.Text       = "[" .. kind .. "]"
+    kindTag.Size       = UDim2.new(0, 140, 0, 18)
+    kindTag.Position   = UDim2.new(0, 8, 0, 4)
+    kindTag.Font       = Enum.Font.GothamBold
+    kindTag.TextSize   = 10
+    kindTag.TextColor3 = kind == "RemoteEvent" and Color3.fromRGB(255, 180, 0) or Color3.fromRGB(180, 100, 255)
+    kindTag.BackgroundTransparency = 1
+    kindTag.TextXAlignment = Enum.TextXAlignment.Left
+    kindTag.ZIndex     = 5
+
+    local nameLabel = Instance.new("TextLabel", row)
+    nameLabel.Text       = name
+    nameLabel.Size       = UDim2.new(1, -120, 0, 16)
+    nameLabel.Position   = UDim2.new(0, 8, 0, 20)
+    nameLabel.Font       = Enum.Font.GothamBold
+    nameLabel.TextSize   = 10
+    nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.TextTruncate   = Enum.TextTruncate.AtEnd
+    nameLabel.ZIndex     = 5
 
     local pathLabel = Instance.new("TextLabel", row)
     pathLabel.Text       = fullPath
-    pathLabel.Size       = UDim2.new(1, -70, 0, 16)
-    pathLabel.Position   = UDim2.new(0, 8, 0, 20)
+    pathLabel.Size       = UDim2.new(1, -120, 0, 14)
+    pathLabel.Position   = UDim2.new(0, 8, 0, 36)
     pathLabel.Font       = Enum.Font.Gotham
-    pathLabel.TextSize   = 10
-    pathLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+    pathLabel.TextSize   = 9
+    pathLabel.TextColor3 = Color3.fromRGB(100, 130, 180)
     pathLabel.BackgroundTransparency = 1
     pathLabel.TextXAlignment = Enum.TextXAlignment.Left
     pathLabel.TextTruncate   = Enum.TextTruncate.AtEnd
     pathLabel.ZIndex     = 5
 
-    local argLabel = Instance.new("TextLabel", row)
-    argLabel.Text       = argStr == "" and "(no args)" or argStr
-    argLabel.Size       = UDim2.new(1, -70, 0, 14)
-    argLabel.Position   = UDim2.new(0, 8, 0, 36)
-    argLabel.Font       = Enum.Font.Gotham
-    argLabel.TextSize   = 9
-    argLabel.TextColor3 = Color3.fromRGB(120, 150, 200)
-    argLabel.BackgroundTransparency = 1
-    argLabel.TextXAlignment = Enum.TextXAlignment.Left
-    argLabel.TextTruncate   = Enum.TextTruncate.AtEnd
-    argLabel.ZIndex     = 5
+    local fireBtn = Instance.new("TextButton", row)
+    fireBtn.Text             = "FIRE"
+    fireBtn.Size             = UDim2.new(0, 42, 0, 20)
+    fireBtn.Position         = UDim2.new(1, -100, 0.5, -10)
+    fireBtn.Font             = Enum.Font.GothamBold
+    fireBtn.TextSize         = 9
+    fireBtn.TextColor3       = Color3.fromRGB(255, 200, 0)
+    fireBtn.BackgroundColor3 = Color3.fromRGB(40, 30, 0)
+    fireBtn.ZIndex           = 5
+    Instance.new("UICorner", fireBtn).CornerRadius = UDim.new(0, 5)
 
     local copyBtn = Instance.new("TextButton", row)
     copyBtn.Text             = "COPY"
-    copyBtn.Size             = UDim2.new(0, 48, 0, 20)
-    copyBtn.Position         = UDim2.new(1, -54, 0.5, -10)
+    copyBtn.Size             = UDim2.new(0, 42, 0, 20)
+    copyBtn.Position         = UDim2.new(1, -52, 0.5, -10)
     copyBtn.Font             = Enum.Font.GothamBold
     copyBtn.TextSize         = 9
     copyBtn.TextColor3       = Color3.fromRGB(0, 200, 255)
@@ -733,27 +712,68 @@ SpyAddEntry = function(method, fullPath, argStr, copyText)
     copyBtn.ZIndex           = 5
     Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 5)
 
+    fireBtn.MouseButton1Click:Connect(function()
+        local ok, err = pcall(function()
+            if kind == "RemoteEvent" then
+                remote:FireServer()
+            elseif kind == "RemoteFunction" then
+                remote:InvokeServer()
+            end
+        end)
+        if ok then
+            fireBtn.Text      = "SENT"
+            fireBtn.TextColor3 = Color3.fromRGB(0, 255, 100)
+            task.delay(1.2, function()
+                fireBtn.Text      = "FIRE"
+                fireBtn.TextColor3 = Color3.fromRGB(255, 200, 0)
+            end)
+        else
+            fireBtn.Text      = "ERR"
+            fireBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
+            task.delay(1.2, function()
+                fireBtn.Text      = "FIRE"
+                fireBtn.TextColor3 = Color3.fromRGB(255, 200, 0)
+            end)
+        end
+    end)
+
     copyBtn.MouseButton1Click:Connect(function()
-        setclipboard(copyText)
-        copyBtn.Text      = "OK!"
+        local method = kind == "RemoteEvent" and "FireServer" or "InvokeServer"
+        setclipboard(fullPath .. ":" .. method .. "()")
+        copyBtn.Text       = "OK!"
         copyBtn.TextColor3 = Color3.fromRGB(0, 255, 100)
         task.delay(1.2, function()
-            copyBtn.Text      = "COPY"
+            copyBtn.Text       = "COPY"
             copyBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
         end)
     end)
-
-    row.Parent = SpyPage
 end
 
-SpyClearBtn.MouseButton1Click:Connect(function()
+ScanBtn.MouseButton1Click:Connect(function()
     for _, child in pairs(SpyPage:GetChildren()) do
-        if child:IsA("Frame") and child ~= SpyClearRow then
+        if child:IsA("Frame") and child ~= RemoteHeaderRow then
             child:Destroy()
         end
     end
-    spyEntryCount      = 0
-    SpyCountLabel.Text = "REMOTE SPY — 0 entries"
+
+    ScanBtn.Text      = "..."
+    ScanBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+
+    task.spawn(function()
+        local found = {}
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
+                table.insert(found, v)
+            end
+        end
+        RemoteCountLabel.Text = "REMOTE EVENT — " .. #found .. " found"
+        for _, remote in ipairs(found) do
+            RemoteAddRow(remote)
+            task.wait()
+        end
+        ScanBtn.Text       = "SCAN"
+        ScanBtn.TextColor3 = Color3.fromRGB(0, 255, 160)
+    end)
 end)
 
 RunService.RenderStepped:Connect(function()
