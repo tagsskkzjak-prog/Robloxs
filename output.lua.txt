@@ -224,19 +224,80 @@ end)
 local spyLog     = {}
 local RemoteAddRow
 
-local function vStr(v)
-    local t = typeof(v)
-    if t == "string"   then return '"' .. tostring(v):sub(1,36) .. '"' end
-    if t == "number"   then return tostring(math.floor(v*100)/100) end
-    if t == "boolean"  then return tostring(v) end
-    if t == "nil"      then return "nil" end
-    if t == "Instance" then
-        local ok, p = pcall(function() return v:GetFullName() end)
-        return ok and p or "Instance"
+local function serialize(val, depth, seen)
+    depth = depth or 0
+    seen  = seen  or {}
+    local t = typeof(val)
+
+    if t == "nil"     then return "nil" end
+    if t == "boolean" then return tostring(val) end
+    if t == "number"  then
+        if val ~= val           then return "nan" end
+        if val == math.huge     then return "inf" end
+        if val == -math.huge    then return "-inf" end
+        local s = tostring(val)
+        return s
     end
-    if t == "Vector3"  then return string.format("V3(%d,%d,%d)", v.X, v.Y, v.Z) end
-    if t == "CFrame"   then return "CFrame" end
-    return tostring(v)
+    if t == "string" then
+        local esc = val:gsub('\\','\\\\'):gsub('"','\\"'):gsub('\n','\\n')
+        if #esc > 48 then esc = esc:sub(1,48) .. "..." end
+        return '"' .. esc .. '"'
+    end
+    if t == "Instance" then
+        local ok, p = pcall(function() return val:GetFullName() end)
+        return ok and p or ("["..tostring(val.ClassName).."]")
+    end
+    if t == "EnumItem" then
+        return tostring(val)
+    end
+    if t == "Vector3" then
+        return string.format("Vector3.new(%g, %g, %g)", val.X, val.Y, val.Z)
+    end
+    if t == "Vector2" then
+        return string.format("Vector2.new(%g, %g)", val.X, val.Y)
+    end
+    if t == "CFrame" then
+        local p = val.Position
+        return string.format("CFrame.new(%g, %g, %g)", p.X, p.Y, p.Z)
+    end
+    if t == "Color3" then
+        return string.format("Color3.fromRGB(%d, %d, %d)",
+            math.round(val.R*255), math.round(val.G*255), math.round(val.B*255))
+    end
+    if t == "UDim2" then
+        return string.format("UDim2.new(%g, %d, %g, %d)",
+            val.X.Scale, val.X.Offset, val.Y.Scale, val.Y.Offset)
+    end
+    if t == "UDim" then
+        return string.format("UDim.new(%g, %d)", val.Scale, val.Offset)
+    end
+    if t == "Rect" then
+        return string.format("Rect.new(%g, %g, %g, %g)",
+            val.Min.X, val.Min.Y, val.Max.X, val.Max.Y)
+    end
+    if t == "table" then
+        if seen[val] or depth > 3 then return "{...}" end
+        seen[val] = true
+        local parts = {}
+        local isArr = (#val > 0)
+        if isArr then
+            for i = 1, math.min(#val, 8) do
+                parts[i] = serialize(val[i], depth+1, seen)
+            end
+            if #val > 8 then parts[#parts+1] = "..." end
+        else
+            local n = 0
+            for k, v2 in pairs(val) do
+                n = n + 1
+                if n > 8 then parts[#parts+1] = "..."; break end
+                local ks = type(k)=="string" and k or ("["..serialize(k, depth+1, seen).."]")
+                parts[#parts+1] = ks .. " = " .. serialize(v2, depth+1, seen)
+            end
+        end
+        seen[val] = nil
+        return "{" .. table.concat(parts, ", ") .. "}"
+    end
+    return "["..t.."]"
 end
 
 local oldNamecall
@@ -245,15 +306,19 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     if method == "FireServer" or method == "InvokeServer" then
         local ok, fullPath = pcall(function() return self:GetFullName() end)
         if ok then
-            local args    = {...}
-            local parts   = {}
-            for _, a in ipairs(args) do table.insert(parts, vStr(a)) end
+            local args  = table.pack(...)
+            local parts = {}
+            for i = 1, args.n do
+                parts[i] = serialize(args[i])
+            end
             local argStr  = table.concat(parts, ", ")
             local copyTxt = fullPath .. ":" .. method .. "(" .. argStr .. ")"
             table.insert(spyLog, copyTxt)
-            if RemoteAddRow then
-                RemoteAddRow(method, self.Name, fullPath, argStr, copyTxt)
-            end
+            task.defer(function()
+                if RemoteAddRow then
+                    RemoteAddRow(method, self.Name, fullPath, argStr, copyTxt)
+                end
+            end)
         end
     end
     return oldNamecall(self, ...)
