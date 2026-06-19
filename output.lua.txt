@@ -35,7 +35,13 @@ RunService.RenderStepped:Connect(function()
     if Settings.Sdamage.Enabled then
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("Humanoid") and v.Health > 0 then
-                v:TakeDamage(Settings.Sdamage.Amount)
+                local root = v.Parent and v.Parent:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local _, onScreen = Camera:WorldToViewportPoint(root.Position)
+                    if onScreen then
+                        v:TakeDamage(Settings.Sdamage.Amount)
+                    end
+                end
             end
         end
     end
@@ -184,7 +190,7 @@ end
 Players.PlayerAdded:Connect(CreateFullESP)
 
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name         = "NEXUS"
+ScreenGui.Name         = "呵呵"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
@@ -242,14 +248,14 @@ Instance.new("UICorner", LogoImg).CornerRadius = UDim.new(0, 8)
 local LogoFallback = Instance.new("TextLabel", LogoFrame)
 LogoFallback.Size                  = UDim2.new(1, 0, 1, 0)
 LogoFallback.BackgroundTransparency = 1
-LogoFallback.Text                  = "NX"
+LogoFallback.Text                  = "呵呵"
 LogoFallback.Font                  = Enum.Font.GothamBold
 LogoFallback.TextSize              = 12
 LogoFallback.TextColor3            = Color3.fromRGB(0, 220, 255)
 LogoFallback.ZIndex                = 4
 
 local Title = Instance.new("TextLabel", Header)
-Title.Text             = "NEXUS"
+Title.Text             = "呵呵"
 Title.Size             = UDim2.new(0, 200, 0, 48)
 Title.Position         = UDim2.new(0, 50, 0, 0)
 Title.TextColor3       = Color3.fromRGB(255, 255, 255)
@@ -285,7 +291,7 @@ CloseBtn.ZIndex              = 5
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
 ToggleBtn.Size                   = UDim2.new(0, 56, 0, 56)
 ToggleBtn.Position               = UDim2.new(0.9, 0, 0.15, 0)
-ToggleBtn.Text                   = "NX"
+ToggleBtn.Text                   = "呵呵"
 ToggleBtn.Font                   = Enum.Font.GothamBold
 ToggleBtn.TextSize               = 13
 ToggleBtn.TextColor3             = Color3.fromRGB(0, 220, 255)
