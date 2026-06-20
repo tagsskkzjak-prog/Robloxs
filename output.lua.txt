@@ -295,18 +295,10 @@ RunService.RenderStepped:Connect(function()
             for _, tool in pairs(myChar:GetChildren()) do
                 if tool:IsA("Tool") then
                     pcall(function()
-                        if tool:FindFirstChild("RemoteEvent") then
-                            for _, v in pairs(tool:GetDescendants()) do
-                                if v.Name:lower():find("reload") or v.Name:lower():find("star") or v.Name:lower():find("ammo") then
-                                    if v:IsA("NumberValue") or v:IsA("IntValue") then
-                                        v.Value = 999
-                                    end
-                                end
-                            end
-                        end
                         for _, v in pairs(tool:GetDescendants()) do
                             if v:IsA("NumberValue") or v:IsA("IntValue") then
-                                if v.Name:lower():find("reload") or v.Name:lower():find("star") or v.Name:lower():find("ammo") then
+                                local n = v.Name:lower()
+                                if n:find("reload") or n:find("star") or n:find("ammo") or n:find("mult") then
                                     v.Value = 999
                                 end
                             end
@@ -319,7 +311,8 @@ RunService.RenderStepped:Connect(function()
                     pcall(function()
                         for _, v in pairs(item:GetDescendants()) do
                             if v:IsA("NumberValue") or v:IsA("IntValue") then
-                                if v.Name:lower():find("reload") or v.Name:lower():find("star") or v.Name:lower():find("ammo") then
+                                local n = v.Name:lower()
+                                if n:find("reload") or n:find("star") or n:find("ammo") or n:find("mult") then
                                     v.Value = 999
                                 end
                             end
@@ -339,7 +332,7 @@ RunService.RenderStepped:Connect(function()
                         for _, v in pairs(tool:GetDescendants()) do
                             if v:IsA("NumberValue") or v:IsA("IntValue") then
                                 local n = v.Name:lower()
-                                if n:find("firerate") or n:find("attackspeed") or n:find("cooldown") or n:find("delay") or n:find("speed") then
+                                if n:find("firerate") or n:find("attackspeed") or n:find("cooldown") or n:find("delay") or n:find("rate") then
                                     v.Value = 0.01
                                 end
                             end
@@ -351,8 +344,8 @@ RunService.RenderStepped:Connect(function()
     end
 
     local myChar = LocalPlayer.Character
-    local myHum = myChar and myChar:FindFirstChildWhichIsA("Humanoid")
-    if myHum and Settings.Other.Speed ~= 16 then
+    local myHum  = myChar and myChar:FindFirstChildWhichIsA("Humanoid")
+    if myHum then
         myHum.WalkSpeed = Settings.Other.Speed
     end
 end)
@@ -362,8 +355,8 @@ ScreenGui.Name         = "呵呵"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size                   = UDim2.new(0, 420, 0, 280)
-MainFrame.Position               = UDim2.new(0.5, -210, 0.5, -140)
+MainFrame.Size                   = UDim2.new(0, 420, 0, 320)
+MainFrame.Position               = UDim2.new(0.5, -210, 0.5, -160)
 MainFrame.BackgroundColor3       = Color3.fromRGB(8, 9, 18)
 MainFrame.BackgroundTransparency = 0
 MainFrame.Visible                = false
@@ -434,7 +427,7 @@ Title.TextYAlignment   = Enum.TextYAlignment.Center
 Title.ZIndex           = 4
 
 local SubTitle = Instance.new("TextLabel", Header)
-SubTitle.Text             = "v3.2"
+SubTitle.Text             = "v3.3"
 SubTitle.Size             = UDim2.new(0, 40, 1, 0)
 SubTitle.Position         = UDim2.new(0, 108, 0, 0)
 SubTitle.TextColor3       = Color3.fromRGB(50, 70, 130)
@@ -511,26 +504,28 @@ Container.ZIndex              = 3
 local Pages = {}
 local function CreatePage(tabName)
     local page = Instance.new("ScrollingFrame", Container)
-    page.Size                 = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    page.CanvasSize           = UDim2.new(0, 0, 0, 0)
-    page.ScrollBarThickness   = 2
-    page.ScrollBarImageColor3 = Color3.fromRGB(0, 140, 255)
-    page.Visible              = false
-    page.ZIndex               = 3
+    page.Size                    = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency  = 1
+    page.AutomaticCanvasSize     = Enum.AutomaticSize.Y
+    page.CanvasSize              = UDim2.new(0, 0, 0, 0)
+    page.ScrollBarThickness      = 3
+    page.ScrollBarImageColor3    = Color3.fromRGB(0, 140, 255)
+    page.ScrollingDirection      = Enum.ScrollingDirection.Y
+    page.Visible                 = false
+    page.ZIndex                  = 3
     local layout = Instance.new("UIListLayout", page)
-    layout.Padding = UDim.new(0, 4)
+    layout.Padding               = UDim.new(0, 4)
+    layout.SortOrder             = Enum.SortOrder.LayoutOrder
     local pad = Instance.new("UIPadding", page)
     pad.PaddingTop   = UDim.new(0, 4)
-    pad.PaddingRight = UDim.new(0, 4)
+    pad.PaddingRight = UDim.new(0, 6)
     Pages[tabName] = page
     return page, layout
 end
 
-local EspPage,   EspLayout   = CreatePage("ESP")
-local AimPage,   AimLayout   = CreatePage("AIM")
-local OtherPage, OtherLayout = CreatePage("OTHER")
+local EspPage,   _ = CreatePage("ESP")
+local AimPage,   _ = CreatePage("AIM")
+local OtherPage, _ = CreatePage("OTHER")
 
 local TabButtons = {}
 local function SwitchTab(tabName)
@@ -577,12 +572,13 @@ AddTabButton("ESP",   "◈", "ESP")
 AddTabButton("AIM",   "◎", "AIM")
 AddTabButton("OTHER", "⚙", "OTHER")
 
-local function MakeCard(page)
+local function MakeCard(page, order)
     local f = Instance.new("Frame", page)
     f.Size                   = UDim2.new(1, -2, 0, 38)
     f.BackgroundColor3       = Color3.fromRGB(10, 12, 23)
     f.BackgroundTransparency = 0
     f.ZIndex                 = 4
+    f.LayoutOrder             = order or 0
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", f)
     s.Color     = Color3.fromRGB(18, 22, 42)
@@ -590,8 +586,8 @@ local function MakeCard(page)
     return f
 end
 
-local function AddToggle(page, name, target, key)
-    local f = MakeCard(page)
+local function AddToggle(page, name, target, key, order)
+    local f = MakeCard(page, order)
 
     local accent = Instance.new("Frame", f)
     accent.Size             = UDim2.new(0, 3, 0, 18)
@@ -641,8 +637,8 @@ local function AddToggle(page, name, target, key)
     Refresh()
 end
 
-local function AddSlider(page, name, minVal, maxVal, target, key)
-    local f = MakeCard(page)
+local function AddSlider(page, name, minVal, maxVal, target, key, order)
+    local f = MakeCard(page, order)
     f.Size = UDim2.new(1, -2, 0, 46)
 
     local accent = Instance.new("Frame", f)
@@ -719,8 +715,8 @@ local function AddSlider(page, name, minVal, maxVal, target, key)
     end)
 end
 
-local function AddSelector(page, name, options, target, key)
-    local f = MakeCard(page)
+local function AddSelector(page, name, options, target, key, order)
+    local f = MakeCard(page, order)
 
     local accent = Instance.new("Frame", f)
     accent.Size             = UDim2.new(0, 3, 0, 18)
@@ -760,108 +756,114 @@ local function AddSelector(page, name, options, target, key)
     Upd()
 end
 
-AddToggle(EspPage,   "MASTER ESP",   Settings.ESP, "Enabled")
-AddToggle(EspPage,   "BOX",          Settings.ESP, "Box")
-AddToggle(EspPage,   "SKELETON",     Settings.ESP, "Skeleton")
-AddToggle(EspPage,   "NAME TAG",     Settings.ESP, "Name")
-AddToggle(EspPage,   "HEALTH BAR",   Settings.ESP, "Health")
-AddToggle(EspPage,   "TRACER LINE",  Settings.ESP, "Line")
-AddSelector(EspPage, "LINE POS",     {"TOP", "CENTER", "BOTTOM"}, Settings.ESP, "LinePos")
-AddSlider(EspPage,   "THICKNESS",    0.5, 3, Settings.ESP, "Thickness")
+AddToggle(EspPage,   "MASTER ESP",   Settings.ESP, "Enabled",       1)
+AddToggle(EspPage,   "BOX",          Settings.ESP, "Box",           2)
+AddToggle(EspPage,   "SKELETON",     Settings.ESP, "Skeleton",      3)
+AddToggle(EspPage,   "NAME TAG",     Settings.ESP, "Name",          4)
+AddToggle(EspPage,   "HEALTH BAR",   Settings.ESP, "Health",        5)
+AddToggle(EspPage,   "TRACER LINE",  Settings.ESP, "Line",          6)
+AddSelector(EspPage, "LINE POS",     {"TOP", "CENTER", "BOTTOM"}, Settings.ESP, "LinePos", 7)
+AddSlider(EspPage,   "THICKNESS",    0.5, 3, Settings.ESP, "Thickness", 8)
 
-AddToggle(AimPage,  "SILENT AIM",      Settings.Aim, "SilentAim")
-AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander")
-AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize")
+AddToggle(AimPage,  "SILENT AIM",      Settings.Aim, "SilentAim",      1)
+AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander", 2)
+AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize", 3)
 
-AddToggle(OtherPage, "ATTRACT PLAYERS", Settings.Other, "AttractPlayers")
+AddToggle(OtherPage, "ATTRACT PLAYERS", Settings.Other, "AttractPlayers", 1)
+AddSlider(OtherPage, "SPEED",           16, 100, Settings.Other, "Speed",        2)
+AddToggle(OtherPage, "NO RELOADING",    Settings.Other, "NoReloading",   3)
+AddToggle(OtherPage, "ATTACK",          Settings.Other, "AttackSpeed",   4)
 
-local tereptolCard = MakeCard(OtherPage)
-tereptolCard.Size = UDim2.new(1, -2, 0, 90)
-
-local tereptolAccent = Instance.new("Frame", tereptolCard)
+local tereptolHeader = MakeCard(OtherPage, 5)
+tereptolHeader.BackgroundColor3 = Color3.fromRGB(6, 8, 18)
+local tereptolAccent = Instance.new("Frame", tereptolHeader)
 tereptolAccent.Size             = UDim2.new(0, 3, 0, 18)
-tereptolAccent.Position         = UDim2.new(0, 0, 0, 6)
-tereptolAccent.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+tereptolAccent.Position         = UDim2.new(0, 0, 0.5, -9)
+tereptolAccent.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
 tereptolAccent.ZIndex           = 5
 Instance.new("UICorner", tereptolAccent).CornerRadius = UDim.new(1, 0)
+local tereptolTitle = Instance.new("TextLabel", tereptolHeader)
+tereptolTitle.Text              = "TEREPTOL"
+tereptolTitle.Size              = UDim2.new(1, -12, 1, 0)
+tereptolTitle.Position          = UDim2.new(0, 12, 0, 0)
+tereptolTitle.Font              = Enum.Font.GothamBold
+tereptolTitle.TextSize          = 10
+tereptolTitle.TextColor3        = Color3.fromRGB(0, 180, 255)
+tereptolTitle.BackgroundTransparency = 1
+tereptolTitle.TextXAlignment    = Enum.TextXAlignment.Left
+tereptolTitle.ZIndex            = 5
 
-local tereptolLabel = Instance.new("TextLabel", tereptolCard)
-tereptolLabel.Text              = "TEREPTOL"
-tereptolLabel.Size              = UDim2.new(1, -12, 0, 20)
-tereptolLabel.Position          = UDim2.new(0, 12, 0, 4)
-tereptolLabel.Font              = Enum.Font.GothamBold
-tereptolLabel.TextSize          = 10
-tereptolLabel.TextColor3        = Color3.fromRGB(200, 205, 225)
-tereptolLabel.BackgroundTransparency = 1
-tereptolLabel.TextXAlignment    = Enum.TextXAlignment.Left
-tereptolLabel.ZIndex            = 5
+local playerCardOrder = 10
+local playerCards = {}
 
-local tereptolScroll = Instance.new("ScrollingFrame", tereptolCard)
-tereptolScroll.Size                 = UDim2.new(1, -8, 0, 62)
-tereptolScroll.Position             = UDim2.new(0, 4, 0, 26)
-tereptolScroll.BackgroundTransparency = 1
-tereptolScroll.CanvasSize           = UDim2.new(0, 0, 0, 0)
-tereptolScroll.ScrollBarThickness   = 2
-tereptolScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 140, 255)
-tereptolScroll.ZIndex               = 5
-
-local tereptolList = Instance.new("UIListLayout", tereptolScroll)
-tereptolList.Padding             = UDim.new(0, 3)
-tereptolList.FillDirection       = Enum.FillDirection.Horizontal
-tereptolList.HorizontalAlignment = Enum.HorizontalAlignment.Left
-tereptolList.WrapsToNewLine      = true
-
-local tereptolButtons = {}
-
-local function RebuildTereptolButtons()
-    for _, b in pairs(tereptolButtons) do
-        pcall(function() b:Destroy() end)
+local function RemovePlayerCard(player)
+    if playerCards[player] then
+        playerCards[player]:Destroy()
+        playerCards[player] = nil
     end
-    tereptolButtons = {}
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            local btn = Instance.new("TextButton", tereptolScroll)
-            btn.Text             = p.Name
-            btn.Font             = Enum.Font.GothamBold
-            btn.TextSize         = 8
-            btn.TextColor3       = Color3.fromRGB(0, 200, 255)
-            btn.BackgroundColor3 = Color3.fromRGB(10, 14, 32)
-            btn.Size             = UDim2.new(0, 80, 0, 24)
-            btn.ZIndex           = 6
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-            local bs = Instance.new("UIStroke", btn)
-            bs.Color     = Color3.fromRGB(0, 80, 180)
-            bs.Thickness = 1
-            btn.MouseButton1Click:Connect(function()
-                local myChar  = LocalPlayer.Character
-                local myRoot  = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                local theirChar = p.Character
-                local theirRoot = theirChar and theirChar:FindFirstChild("HumanoidRootPart")
-                if myRoot and theirRoot then
-                    myRoot.CFrame = theirRoot.CFrame + Vector3.new(0, 3, 0)
-                end
-            end)
-            table.insert(tereptolButtons, btn)
-        end
-    end
-    local total = #tereptolButtons
-    local rows  = math.ceil(total / 3)
-    tereptolScroll.CanvasSize = UDim2.new(0, 0, 0, rows * 27)
 end
 
-RebuildTereptolButtons()
-Players.PlayerAdded:Connect(function()
-    task.wait(0.5)
-    RebuildTereptolButtons()
-end)
-Players.PlayerRemoving:Connect(function()
-    task.wait(0.1)
-    RebuildTereptolButtons()
-end)
+local function AddPlayerCard(player)
+    RemovePlayerCard(player)
+    local f = Instance.new("Frame", OtherPage)
+    f.Size                   = UDim2.new(1, -2, 0, 38)
+    f.BackgroundColor3       = Color3.fromRGB(8, 11, 22)
+    f.BackgroundTransparency = 0
+    f.ZIndex                 = 4
+    f.LayoutOrder             = playerCardOrder
+    playerCardOrder           = playerCardOrder + 1
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
+    local s = Instance.new("UIStroke", f)
+    s.Color     = Color3.fromRGB(0, 60, 140)
+    s.Thickness = 1
 
-AddSlider(OtherPage, "SPEED", 16, 100, Settings.Other, "Speed")
-AddToggle(OtherPage, "NO RELOADING",  Settings.Other, "NoReloading")
-AddToggle(OtherPage, "ATTACK",        Settings.Other, "AttackSpeed")
+    local nameLabel = Instance.new("TextLabel", f)
+    nameLabel.Text              = "→  " .. player.Name
+    nameLabel.Size              = UDim2.new(0.6, 0, 1, 0)
+    nameLabel.Position          = UDim2.new(0, 10, 0, 0)
+    nameLabel.Font              = Enum.Font.GothamBold
+    nameLabel.TextSize          = 10
+    nameLabel.TextColor3        = Color3.fromRGB(160, 200, 255)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextXAlignment    = Enum.TextXAlignment.Left
+    nameLabel.ZIndex            = 5
+
+    local tpBtn = Instance.new("TextButton", f)
+    tpBtn.Text             = "TP"
+    tpBtn.Font             = Enum.Font.GothamBold
+    tpBtn.TextSize         = 9
+    tpBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
+    tpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+    tpBtn.Size             = UDim2.new(0, 44, 0, 24)
+    tpBtn.Position         = UDim2.new(1, -52, 0.5, -12)
+    tpBtn.ZIndex           = 5
+    Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(0, 6)
+    tpBtn.MouseButton1Click:Connect(function()
+        local myChar    = LocalPlayer.Character
+        local myRoot    = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local theirChar = player.Character
+        local theirRoot = theirChar and theirChar:FindFirstChild("HumanoidRootPart")
+        if myRoot and theirRoot then
+            myRoot.CFrame = theirRoot.CFrame + Vector3.new(0, 3, 0)
+        end
+    end)
+
+    playerCards[player] = f
+end
+
+for _, p in pairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then AddPlayerCard(p) end
+end
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then
+        task.wait(0.5)
+        AddPlayerCard(p)
+    end
+end)
+Players.PlayerRemoving:Connect(function(p)
+    task.wait(0.1)
+    RemovePlayerCard(p)
+end)
 
 RunService.RenderStepped:Connect(function()
     MainStroke.Color            = currentAutoColor
