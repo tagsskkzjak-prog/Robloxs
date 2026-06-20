@@ -12,11 +12,11 @@ local LocalPlayer      = Players.LocalPlayer
 local Camera           = game.Workspace.CurrentCamera
 
 local AutoColors = {
-    Color3.fromRGB(0,   180, 255),
-    Color3.fromRGB(120, 0,   255),
-    Color3.fromRGB(255, 60,  180),
-    Color3.fromRGB(0,   255, 180),
-    Color3.fromRGB(255, 160, 0),
+    Color3.fromRGB(0,   210, 90),
+    Color3.fromRGB(0,   255, 140),
+    Color3.fromRGB(60,  220, 120),
+    Color3.fromRGB(120, 255, 80),
+    Color3.fromRGB(0,   180, 60),
 }
 local autoColorIndex   = 1
 local autoColorTimer   = 0
@@ -221,7 +221,7 @@ local function StartFly()
             local targetY = ray.Position.Y + Settings.Other.FlyHeight
             yVel = math.clamp((targetY - r.Position.Y) * 8, -60, 60)
         else
-            yVel = math.clamp((Settings.Other.FlyHeight - 0) * 0.5, 0, 30)
+            yVel = math.clamp(Settings.Other.FlyHeight * 0.5, 0, 30)
         end
         flyBV.Velocity = Vector3.new(hVel.X, yVel, hVel.Z)
         if md.Magnitude > 0.05 then
@@ -436,6 +436,19 @@ Players.PlayerRemoving:Connect(function(p)
     DestroyESP(p)
 end)
 
+local G_GREEN    = Color3.fromRGB(0,   210, 90)
+local G_BRIGHT   = Color3.fromRGB(0,   240, 110)
+local G_MID      = Color3.fromRGB(0,   160, 65)
+local G_DARK     = Color3.fromRGB(0,   90,  38)
+local G_DARKEST  = Color3.fromRGB(0,   50,  20)
+local G_INACTIVE = Color3.fromRGB(30,  55,  38)
+local G_TEXT     = Color3.fromRGB(210, 245, 220)
+local G_MUTED    = Color3.fromRGB(85,  130, 100)
+local G_CARD     = Color3.fromRGB(6,   18,  10)
+local G_STROKE   = Color3.fromRGB(18,  48,  26)
+local G_TRACK    = Color3.fromRGB(10,  26,  15)
+local G_BG       = Color3.fromRGB(4,   12,  7)
+
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name         = "呵呵"
 ScreenGui.ResetOnSpawn = false
@@ -443,8 +456,8 @@ ScreenGui.ResetOnSpawn = false
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size                   = UDim2.new(0, 420, 0, 320)
 MainFrame.Position               = UDim2.new(0.5, -210, 0.5, -160)
-MainFrame.BackgroundColor3       = Color3.fromRGB(8, 9, 18)
-MainFrame.BackgroundTransparency = 0
+MainFrame.BackgroundColor3       = G_BG
+MainFrame.BackgroundTransparency = 0.18
 MainFrame.Visible                = false
 MainFrame.Active                 = true
 MainFrame.Draggable              = true
@@ -456,38 +469,38 @@ MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local BgGrad = Instance.new("UIGradient", MainFrame)
 BgGrad.Color    = ColorSequence.new({
-    ColorSequenceKeypoint.new(0,   Color3.fromRGB(10, 12, 24)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(6,  8,  18)),
-    ColorSequenceKeypoint.new(1,   Color3.fromRGB(10, 12, 24)),
+    ColorSequenceKeypoint.new(0,   Color3.fromRGB(5,  16, 8)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(3,  10, 5)),
+    ColorSequenceKeypoint.new(1,   Color3.fromRGB(5,  16, 8)),
 })
 BgGrad.Rotation = 135
 
 local Header = Instance.new("Frame", MainFrame)
 Header.Size                   = UDim2.new(1, 0, 0, 40)
-Header.BackgroundColor3       = Color3.fromRGB(8, 10, 20)
-Header.BackgroundTransparency = 0
+Header.BackgroundColor3       = Color3.fromRGB(5, 16, 8)
+Header.BackgroundTransparency = 0.12
 Header.ZIndex                 = 3
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
 
 local HeaderLine = Instance.new("Frame", Header)
 HeaderLine.Size             = UDim2.new(1, -20, 0, 1)
 HeaderLine.Position         = UDim2.new(0, 10, 1, -1)
-HeaderLine.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
-HeaderLine.BackgroundTransparency = 0.5
+HeaderLine.BackgroundColor3 = G_GREEN
+HeaderLine.BackgroundTransparency = 0.3
 HeaderLine.ZIndex           = 4
 Instance.new("UICorner", HeaderLine).CornerRadius = UDim.new(1, 0)
 
 local LogoCircle = Instance.new("Frame", Header)
 LogoCircle.Size             = UDim2.new(0, 26, 0, 26)
 LogoCircle.Position         = UDim2.new(0, 8, 0.5, -13)
-LogoCircle.BackgroundColor3 = Color3.fromRGB(0, 100, 220)
+LogoCircle.BackgroundColor3 = G_DARK
 LogoCircle.ZIndex           = 5
 Instance.new("UICorner", LogoCircle).CornerRadius = UDim.new(1, 0)
 
 local LogoGrad = Instance.new("UIGradient", LogoCircle)
 LogoGrad.Color    = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 160, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)),
+    ColorSequenceKeypoint.new(0, G_GREEN),
+    ColorSequenceKeypoint.new(1, G_DARK),
 })
 LogoGrad.Rotation = 45
 
@@ -504,7 +517,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Text             = "呵呵"
 Title.Size             = UDim2.new(0, 160, 1, 0)
 Title.Position         = UDim2.new(0, 42, 0, 0)
-Title.TextColor3       = Color3.fromRGB(230, 235, 255)
+Title.TextColor3       = G_TEXT
 Title.Font             = Enum.Font.GothamBold
 Title.TextSize         = 14
 Title.BackgroundTransparency = 1
@@ -516,7 +529,7 @@ local SubTitle = Instance.new("TextLabel", Header)
 SubTitle.Text             = "v3.4"
 SubTitle.Size             = UDim2.new(0, 40, 1, 0)
 SubTitle.Position         = UDim2.new(0, 108, 0, 0)
-SubTitle.TextColor3       = Color3.fromRGB(50, 70, 130)
+SubTitle.TextColor3       = G_MUTED
 SubTitle.Font             = Enum.Font.Gotham
 SubTitle.TextSize         = 9
 SubTitle.BackgroundTransparency = 1
@@ -542,9 +555,9 @@ ToggleBtn.Position               = UDim2.new(0.88, 0, 0.12, 0)
 ToggleBtn.Text                   = "呵呵"
 ToggleBtn.Font                   = Enum.Font.GothamBold
 ToggleBtn.TextSize               = 10
-ToggleBtn.TextColor3             = Color3.fromRGB(0, 180, 255)
-ToggleBtn.BackgroundColor3       = Color3.fromRGB(8, 10, 20)
-ToggleBtn.BackgroundTransparency = 0.1
+ToggleBtn.TextColor3             = G_GREEN
+ToggleBtn.BackgroundColor3       = G_BG
+ToggleBtn.BackgroundTransparency = 0.15
 ToggleBtn.Active                 = true
 ToggleBtn.Draggable              = true
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
@@ -561,15 +574,15 @@ end)
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Size                   = UDim2.new(0, 90, 1, -46)
 Sidebar.Position               = UDim2.new(0, 5, 0, 42)
-Sidebar.BackgroundColor3       = Color3.fromRGB(6, 8, 17)
-Sidebar.BackgroundTransparency = 0
+Sidebar.BackgroundColor3       = Color3.fromRGB(4, 12, 6)
+Sidebar.BackgroundTransparency = 0.12
 Sidebar.ZIndex                 = 3
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
 
 local SidebarGrad = Instance.new("UIGradient", Sidebar)
 SidebarGrad.Color    = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 10, 22)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 6, 14)),
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 16, 8)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(3, 9,  5)),
 })
 SidebarGrad.Rotation = 90
 
@@ -595,7 +608,7 @@ local function CreatePage(tabName)
     page.AutomaticCanvasSize     = Enum.AutomaticSize.Y
     page.CanvasSize              = UDim2.new(0, 0, 0, 0)
     page.ScrollBarThickness      = 3
-    page.ScrollBarImageColor3    = Color3.fromRGB(0, 140, 255)
+    page.ScrollBarImageColor3    = G_GREEN
     page.ScrollingDirection      = Enum.ScrollingDirection.Y
     page.Visible                 = false
     page.ZIndex                  = 3
@@ -621,15 +634,15 @@ local function SwitchTab(tabName)
     end
     for name, btn in pairs(TabButtons) do
         if name == tabName then
-            btn.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+            btn.BackgroundColor3 = G_DARK
             btn.TextColor3       = Color3.fromRGB(255, 255, 255)
             local s = btn:FindFirstChildOfClass("UIStroke")
-            if s then s.Color = Color3.fromRGB(0, 140, 255) end
+            if s then s.Color = G_GREEN end
         else
-            btn.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
-            btn.TextColor3       = Color3.fromRGB(110, 115, 145)
+            btn.BackgroundColor3 = Color3.fromRGB(8, 20, 11)
+            btn.TextColor3       = G_MUTED
             local s = btn:FindFirstChildOfClass("UIStroke")
-            if s then s.Color = Color3.fromRGB(20, 22, 40) end
+            if s then s.Color = G_STROKE end
         end
     end
 end
@@ -641,12 +654,12 @@ local function AddTabButton(name, icon, label)
     btn.Font             = Enum.Font.GothamBold
     btn.TextSize         = 10
     btn.TextXAlignment   = Enum.TextXAlignment.Left
-    btn.TextColor3       = Color3.fromRGB(110, 115, 145)
-    btn.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
+    btn.TextColor3       = G_MUTED
+    btn.BackgroundColor3 = Color3.fromRGB(8, 20, 11)
     btn.ZIndex           = 4
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", btn)
-    s.Color     = Color3.fromRGB(20, 22, 40)
+    s.Color     = G_STROKE
     s.Thickness = 1
     local pad = Instance.new("UIPadding", btn)
     pad.PaddingLeft = UDim.new(0, 8)
@@ -661,13 +674,13 @@ AddTabButton("OTHER", "⚙", "OTHER")
 local function MakeCard(page, order)
     local f = Instance.new("Frame", page)
     f.Size                   = UDim2.new(1, -2, 0, 38)
-    f.BackgroundColor3       = Color3.fromRGB(10, 12, 23)
-    f.BackgroundTransparency = 0
+    f.BackgroundColor3       = G_CARD
+    f.BackgroundTransparency = 0.05
     f.ZIndex                 = 4
     f.LayoutOrder            = order or 0
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", f)
-    s.Color     = Color3.fromRGB(18, 22, 42)
+    s.Color     = G_STROKE
     s.Thickness = 1
     return f
 end
@@ -678,7 +691,7 @@ local function AddToggle(page, name, target, key, order)
     local accent = Instance.new("Frame", f)
     accent.Size             = UDim2.new(0, 3, 0, 18)
     accent.Position         = UDim2.new(0, 0, 0.5, -9)
-    accent.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+    accent.BackgroundColor3 = G_INACTIVE
     accent.ZIndex           = 5
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
 
@@ -688,7 +701,7 @@ local function AddToggle(page, name, target, key, order)
     TL.Position          = UDim2.new(0, 12, 0, 0)
     TL.Font              = Enum.Font.GothamBold
     TL.TextSize          = 10
-    TL.TextColor3        = Color3.fromRGB(200, 205, 225)
+    TL.TextColor3        = G_TEXT
     TL.BackgroundTransparency = 1
     TL.TextXAlignment    = Enum.TextXAlignment.Left
     TL.ZIndex            = 5
@@ -696,7 +709,7 @@ local function AddToggle(page, name, target, key, order)
     local Track = Instance.new("Frame", f)
     Track.Size             = UDim2.new(0, 36, 0, 18)
     Track.Position         = UDim2.new(1, -44, 0.5, -9)
-    Track.BackgroundColor3 = target[key] and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
+    Track.BackgroundColor3 = target[key] and G_MID or Color3.fromRGB(14, 32, 18)
     Track.ZIndex           = 5
     Instance.new("UICorner", Track).CornerRadius = UDim.new(1, 0)
 
@@ -709,9 +722,9 @@ local function AddToggle(page, name, target, key, order)
 
     local function Refresh()
         local on = target[key]
-        Track.BackgroundColor3  = on and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
+        Track.BackgroundColor3  = on and G_MID or Color3.fromRGB(14, 32, 18)
         Knob.Position           = on and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
-        accent.BackgroundColor3 = on and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(40, 44, 70)
+        accent.BackgroundColor3 = on and G_GREEN or G_INACTIVE
     end
 
     Track.InputBegan:Connect(function(i)
@@ -723,6 +736,18 @@ local function AddToggle(page, name, target, key, order)
     Refresh()
 end
 
+local _activeDragFn = nil
+UserInputService.InputChanged:Connect(function(i)
+    if _activeDragFn and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+        _activeDragFn(i.Position)
+    end
+end)
+UserInputService.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        _activeDragFn = nil
+    end
+end)
+
 local function AddSlider(page, name, minVal, maxVal, target, key, order)
     local f = MakeCard(page, order)
     f.Size = UDim2.new(1, -2, 0, 46)
@@ -730,7 +755,7 @@ local function AddSlider(page, name, minVal, maxVal, target, key, order)
     local accent = Instance.new("Frame", f)
     accent.Size             = UDim2.new(0, 3, 0, 18)
     accent.Position         = UDim2.new(0, 0, 0, 10)
-    accent.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    accent.BackgroundColor3 = G_GREEN
     accent.ZIndex           = 5
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
 
@@ -740,62 +765,56 @@ local function AddSlider(page, name, minVal, maxVal, target, key, order)
     LT.Position          = UDim2.new(0, 12, 0, 4)
     LT.Font              = Enum.Font.GothamBold
     LT.TextSize          = 10
-    LT.TextColor3        = Color3.fromRGB(200, 205, 225)
+    LT.TextColor3        = G_TEXT
     LT.BackgroundTransparency = 1
     LT.TextXAlignment    = Enum.TextXAlignment.Left
     LT.ZIndex            = 5
 
     local TrackBg = Instance.new("Frame", f)
-    TrackBg.Size             = UDim2.new(1, -18, 0, 6)
-    TrackBg.Position         = UDim2.new(0, 9, 0, 32)
-    TrackBg.BackgroundColor3 = Color3.fromRGB(18, 20, 38)
+    TrackBg.Size             = UDim2.new(1, -18, 0, 8)
+    TrackBg.Position         = UDim2.new(0, 9, 0, 30)
+    TrackBg.BackgroundColor3 = G_TRACK
     TrackBg.ZIndex           = 5
     Instance.new("UICorner", TrackBg).CornerRadius = UDim.new(1, 0)
 
+    local pctInit = (target[key] - minVal) / math.max(maxVal - minVal, 1)
+
     local Fill = Instance.new("Frame", TrackBg)
-    local pctInit = (target[key] - minVal) / (maxVal - minVal)
     Fill.Size             = UDim2.new(pctInit, 0, 1, 0)
-    Fill.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+    Fill.BackgroundColor3 = G_MID
     Fill.ZIndex           = 6
     Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
 
     local FillGrad = Instance.new("UIGradient", Fill)
     FillGrad.Color    = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 180, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)),
+        ColorSequenceKeypoint.new(0, G_BRIGHT),
+        ColorSequenceKeypoint.new(1, G_DARK),
     })
     FillGrad.Rotation = 0
 
     local Knob = Instance.new("Frame", TrackBg)
-    Knob.Size             = UDim2.new(0, 11, 0, 11)
+    Knob.Size             = UDim2.new(0, 14, 0, 14)
     Knob.AnchorPoint      = Vector2.new(0.5, 0.5)
     Knob.Position         = UDim2.new(pctInit, 0, 0.5, 0)
-    Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Knob.BackgroundColor3 = Color3.fromRGB(240, 255, 245)
     Knob.ZIndex           = 7
     Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    local KnobStroke = Instance.new("UIStroke", Knob)
+    KnobStroke.Color     = G_MID
+    KnobStroke.Thickness = 1.5
 
     local function Set(ip)
         local pct = math.clamp((ip.X - TrackBg.AbsolutePosition.X) / TrackBg.AbsoluteSize.X, 0, 1)
-        local val = minVal + pct * (maxVal - minVal)
-        val = maxVal <= 10 and (math.floor(val * 10) / 10) or math.floor(val)
+        local val = maxVal <= 10 and (math.floor(pct * (maxVal - minVal) * 10 + minVal * 10) / 10) or math.floor(minVal + pct * (maxVal - minVal))
         target[key]   = val
         LT.Text       = name .. ":  " .. val
         Fill.Size     = UDim2.new(pct, 0, 1, 0)
         Knob.Position = UDim2.new(pct, 0, 0.5, 0)
     end
-    local drag = false
+
     TrackBg.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            drag = true; Set(i.Position)
-        end
-    end)
-    TrackBg.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            drag = false
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            _activeDragFn = Set
             Set(i.Position)
         end
     end)
@@ -807,7 +826,7 @@ local function AddSelector(page, name, options, target, key, order)
     local accent = Instance.new("Frame", f)
     accent.Size             = UDim2.new(0, 3, 0, 18)
     accent.Position         = UDim2.new(0, 0, 0.5, -9)
-    accent.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+    accent.BackgroundColor3 = G_GREEN
     accent.ZIndex           = 5
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
 
@@ -817,7 +836,7 @@ local function AddSelector(page, name, options, target, key, order)
     TL.Position          = UDim2.new(0, 12, 0, 0)
     TL.Font              = Enum.Font.GothamBold
     TL.TextSize          = 10
-    TL.TextColor3        = Color3.fromRGB(200, 205, 225)
+    TL.TextColor3        = G_TEXT
     TL.BackgroundTransparency = 1
     TL.TextXAlignment    = Enum.TextXAlignment.Left
     TL.ZIndex            = 5
@@ -825,14 +844,14 @@ local function AddSelector(page, name, options, target, key, order)
     local Btn = Instance.new("TextButton", f)
     Btn.Font             = Enum.Font.GothamBold
     Btn.TextSize         = 9
-    Btn.TextColor3       = Color3.fromRGB(0, 180, 255)
-    Btn.BackgroundColor3 = Color3.fromRGB(10, 14, 30)
+    Btn.TextColor3       = G_GREEN
+    Btn.BackgroundColor3 = Color3.fromRGB(6, 18, 10)
     Btn.Size             = UDim2.new(0, 84, 0, 22)
     Btn.Position         = UDim2.new(1, -90, 0.5, -11)
     Btn.ZIndex           = 5
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
     local BS = Instance.new("UIStroke", Btn)
-    BS.Color     = Color3.fromRGB(0, 80, 180)
+    BS.Color     = G_DARK
     BS.Thickness = 1
 
     local idx = 1
@@ -861,7 +880,7 @@ local flyCard = MakeCard(OtherPage, 10)
 local flyAccent = Instance.new("Frame", flyCard)
 flyAccent.Size             = UDim2.new(0, 3, 0, 18)
 flyAccent.Position         = UDim2.new(0, 0, 0.5, -9)
-flyAccent.BackgroundColor3 = Color3.fromRGB(40, 44, 70)
+flyAccent.BackgroundColor3 = G_INACTIVE
 flyAccent.ZIndex           = 5
 Instance.new("UICorner", flyAccent).CornerRadius = UDim.new(1, 0)
 local flyLabel = Instance.new("TextLabel", flyCard)
@@ -870,14 +889,14 @@ flyLabel.Size              = UDim2.new(0.65, 0, 1, 0)
 flyLabel.Position          = UDim2.new(0, 12, 0, 0)
 flyLabel.Font              = Enum.Font.GothamBold
 flyLabel.TextSize          = 10
-flyLabel.TextColor3        = Color3.fromRGB(200, 205, 225)
+flyLabel.TextColor3        = G_TEXT
 flyLabel.BackgroundTransparency = 1
 flyLabel.TextXAlignment    = Enum.TextXAlignment.Left
 flyLabel.ZIndex            = 5
 local flyTrack = Instance.new("Frame", flyCard)
 flyTrack.Size             = UDim2.new(0, 36, 0, 18)
 flyTrack.Position         = UDim2.new(1, -44, 0.5, -9)
-flyTrack.BackgroundColor3 = Color3.fromRGB(22, 24, 40)
+flyTrack.BackgroundColor3 = Color3.fromRGB(14, 32, 18)
 flyTrack.ZIndex           = 5
 Instance.new("UICorner", flyTrack).CornerRadius = UDim.new(1, 0)
 local flyKnob = Instance.new("Frame", flyTrack)
@@ -893,7 +912,7 @@ local function MakeFlySlider(order, name, key)
     local ac = Instance.new("Frame", f)
     ac.Size             = UDim2.new(0, 3, 0, 18)
     ac.Position         = UDim2.new(0, 0, 0, 10)
-    ac.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    ac.BackgroundColor3 = G_GREEN
     ac.ZIndex           = 5
     Instance.new("UICorner", ac).CornerRadius = UDim.new(1, 0)
     local lt = Instance.new("TextLabel", f)
@@ -902,31 +921,34 @@ local function MakeFlySlider(order, name, key)
     lt.Position          = UDim2.new(0, 12, 0, 4)
     lt.Font              = Enum.Font.GothamBold
     lt.TextSize          = 10
-    lt.TextColor3        = Color3.fromRGB(200, 205, 225)
+    lt.TextColor3        = G_TEXT
     lt.BackgroundTransparency = 1
     lt.TextXAlignment    = Enum.TextXAlignment.Left
     lt.ZIndex            = 5
     local trackBg = Instance.new("Frame", f)
-    trackBg.Size             = UDim2.new(1, -18, 0, 6)
-    trackBg.Position         = UDim2.new(0, 9, 0, 32)
-    trackBg.BackgroundColor3 = Color3.fromRGB(18, 20, 38)
+    trackBg.Size             = UDim2.new(1, -18, 0, 8)
+    trackBg.Position         = UDim2.new(0, 9, 0, 30)
+    trackBg.BackgroundColor3 = G_TRACK
     trackBg.ZIndex           = 5
     Instance.new("UICorner", trackBg).CornerRadius = UDim.new(1, 0)
     local fill = Instance.new("Frame", trackBg)
     fill.Size             = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+    fill.BackgroundColor3 = G_MID
     fill.ZIndex           = 6
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
     local fg = Instance.new("UIGradient", fill)
-    fg.Color    = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 180, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)) })
+    fg.Color    = ColorSequence.new({ ColorSequenceKeypoint.new(0, G_BRIGHT), ColorSequenceKeypoint.new(1, G_DARK) })
     fg.Rotation = 0
     local knob = Instance.new("Frame", trackBg)
-    knob.Size             = UDim2.new(0, 11, 0, 11)
+    knob.Size             = UDim2.new(0, 14, 0, 14)
     knob.AnchorPoint      = Vector2.new(0.5, 0.5)
     knob.Position         = UDim2.new(0, 0, 0.5, 0)
-    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.BackgroundColor3 = Color3.fromRGB(240, 255, 245)
     knob.ZIndex           = 7
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+    local ks = Instance.new("UIStroke", knob)
+    ks.Color     = G_MID
+    ks.Thickness = 1.5
     local function Set(ip)
         local pct = math.clamp((ip.X - trackBg.AbsolutePosition.X) / trackBg.AbsoluteSize.X, 0, 1)
         local val = math.floor(pct * 200)
@@ -935,19 +957,9 @@ local function MakeFlySlider(order, name, key)
         fill.Size      = UDim2.new(pct, 0, 1, 0)
         knob.Position  = UDim2.new(pct, 0, 0.5, 0)
     end
-    local drag = false
     trackBg.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            drag = true; Set(i.Position)
-        end
-    end)
-    trackBg.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            drag = false
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(i)
-        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            _activeDragFn = Set
             Set(i.Position)
         end
     end)
@@ -958,9 +970,9 @@ MakeFlySlider(12, "FAST FLIGHT", "FlySpeed")
 
 local function RefreshFlyToggle()
     local on = Settings.Other.Fly
-    flyTrack.BackgroundColor3  = on and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
+    flyTrack.BackgroundColor3  = on and G_MID or Color3.fromRGB(14, 32, 18)
     flyKnob.Position           = on and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
-    flyAccent.BackgroundColor3 = on and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(40, 44, 70)
+    flyAccent.BackgroundColor3 = on and G_GREEN or G_INACTIVE
 end
 
 flyTrack.InputBegan:Connect(function(i)
@@ -976,11 +988,11 @@ end)
 RefreshFlyToggle()
 
 local tereptolHeader = MakeCard(OtherPage, 50)
-tereptolHeader.BackgroundColor3 = Color3.fromRGB(6, 8, 18)
+tereptolHeader.BackgroundColor3 = Color3.fromRGB(4, 12, 6)
 local tereptolAccent = Instance.new("Frame", tereptolHeader)
 tereptolAccent.Size             = UDim2.new(0, 3, 0, 18)
 tereptolAccent.Position         = UDim2.new(0, 0, 0.5, -9)
-tereptolAccent.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+tereptolAccent.BackgroundColor3 = G_GREEN
 tereptolAccent.ZIndex           = 5
 Instance.new("UICorner", tereptolAccent).CornerRadius = UDim.new(1, 0)
 local tereptolTitle = Instance.new("TextLabel", tereptolHeader)
@@ -989,7 +1001,7 @@ tereptolTitle.Size              = UDim2.new(1, -12, 1, 0)
 tereptolTitle.Position          = UDim2.new(0, 12, 0, 0)
 tereptolTitle.Font              = Enum.Font.GothamBold
 tereptolTitle.TextSize          = 10
-tereptolTitle.TextColor3        = Color3.fromRGB(0, 180, 255)
+tereptolTitle.TextColor3        = G_GREEN
 tereptolTitle.BackgroundTransparency = 1
 tereptolTitle.TextXAlignment    = Enum.TextXAlignment.Left
 tereptolTitle.ZIndex            = 5
@@ -1008,14 +1020,14 @@ local function AddPlayerCard(player)
     RemovePlayerCard(player)
     local f = Instance.new("Frame", OtherPage)
     f.Size                   = UDim2.new(1, -2, 0, 38)
-    f.BackgroundColor3       = Color3.fromRGB(8, 11, 22)
-    f.BackgroundTransparency = 0
+    f.BackgroundColor3       = G_CARD
+    f.BackgroundTransparency = 0.05
     f.ZIndex                 = 4
     f.LayoutOrder            = playerCardOrder
     playerCardOrder          = playerCardOrder + 1
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", f)
-    s.Color     = Color3.fromRGB(0, 60, 140)
+    s.Color     = G_DARK
     s.Thickness = 1
 
     local nameLabel = Instance.new("TextLabel", f)
@@ -1024,7 +1036,7 @@ local function AddPlayerCard(player)
     nameLabel.Position          = UDim2.new(0, 10, 0, 0)
     nameLabel.Font              = Enum.Font.GothamBold
     nameLabel.TextSize          = 10
-    nameLabel.TextColor3        = Color3.fromRGB(160, 200, 255)
+    nameLabel.TextColor3        = Color3.fromRGB(160, 230, 185)
     nameLabel.BackgroundTransparency = 1
     nameLabel.TextXAlignment    = Enum.TextXAlignment.Left
     nameLabel.ZIndex            = 5
@@ -1034,7 +1046,7 @@ local function AddPlayerCard(player)
     tpBtn.Font             = Enum.Font.GothamBold
     tpBtn.TextSize         = 9
     tpBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
-    tpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+    tpBtn.BackgroundColor3 = G_DARK
     tpBtn.Size             = UDim2.new(0, 44, 0, 24)
     tpBtn.Position         = UDim2.new(1, -52, 0.5, -12)
     tpBtn.ZIndex           = 5
@@ -1070,10 +1082,6 @@ RunService.RenderStepped:Connect(function()
     MainStroke.Color            = currentAutoColor
     ToggleStroke.Color          = currentAutoColor
     HeaderLine.BackgroundColor3 = currentAutoColor
-    LogoGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, currentAutoColor),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)),
-    })
 end)
 
 SwitchTab("ESP")
