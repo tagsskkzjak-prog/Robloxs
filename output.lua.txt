@@ -1,15 +1,31 @@
-local Settings = {
-    ESP = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
-    Aim = { SilentAim = false, HitboxExpander = false, HitboxSize = 10 },
-    Other = { AttractPlayers = false, SwordAuto = false },
-    CurrentTab = "ESP"
-}
-
 local RunService       = game:GetService("RunService")
 local Players          = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer      = Players.LocalPlayer
 local Camera           = game.Workspace.CurrentCamera
+
+local Settings = {
+    ESP = {
+        Enabled   = true,
+        Box       = true,
+        Skeleton  = true,
+        Name      = true,
+        Health    = true,
+        Line      = true,
+        LinePos   = "TOP",
+        Thickness = 0.6,
+    },
+    Aim = {
+        SilentAim      = false,
+        HitboxExpander = false,
+        HitboxSize     = 10,
+    },
+    Other = {
+        SwordAuto      = false,
+        AttractPlayers = false,
+    },
+    CurrentTab = "ESP",
+}
 
 local AutoColors = {
     Color3.fromRGB(0,   180, 255),
@@ -71,90 +87,89 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local attractBodyVelocities = {}
-
-local function SetupAttract(player)
-    if not player.Character then return end
-    local root = player.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+local swordTimer = 0
+RunService.Heartbeat:Connect(function(dt)
+    if not Settings.Other.SwordAuto then return end
+    swordTimer = swordTimer + dt
+    if swordTimer < 0.05 then return end
+    swordTimer = 0
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, tool in pairs(char:GetChildren()) do
+        if tool:IsA("Tool") then
+            pcall(function() tool:Activate() end)
+            pcall(function()
+                local h = tool:FindFirstChildWhichIsA("Script") or tool:FindFirstChildWhichIsA("LocalScript")
+                if h then
+                    for _, v in pairs(tool:GetDescendants()) do
+                        if v:IsA("RemoteEvent") then
+                            pcall(function() v:FireServer() end)
+                        end
+                    end
+                end
+            end)
+            pcall(function()
+                for _, v in pairs(tool:GetDescendants()) do
+                    if v:IsA("RemoteEvent") then
+                        pcall(function() v:FireServer() end)
+                    end
+                end
+            end)
+        end
+    end
+    pcall(function() mouse1press() end)
     pcall(function()
-        local bv = root:FindFirstChild("_AttractBV")
-        if not bv then
-            bv = Instance.new("BodyVelocity")
-            bv.Name         = "_AttractBV"
-            bv.MaxForce     = Vector3.new(1e9, 1e9, 1e9)
-            bv.Velocity     = Vector3.new(0, 0, 0)
-            bv.P            = 1e9
-            bv.Parent       = root
-        end
-        attractBodyVelocities[player] = bv
+        task.delay(0.02, function()
+            pcall(function() mouse1release() end)
+        end)
     end)
-end
+end)
 
-local function CleanAttract(player)
-    pcall(function()
-        if attractBodyVelocities[player] then
-            attractBodyVelocities[player]:Destroy()
-            attractBodyVelocities[player] = nil
-        end
-        if player.Character then
-            local root = player.Character:FindFirstChild("HumanoidRootPart")
-            if root then
-                local bv = root:FindFirstChild("_AttractBV")
-                if bv then bv:Destroy() end
-            end
-        end
-    end)
-end
-
+local attractBVs = {}
 RunService.Heartbeat:Connect(function(dt)
     if not Settings.Other.AttractPlayers then
-        for p, _ in pairs(attractBodyVelocities) do
-            CleanAttract(p)
+        for p, bv in pairs(attractBVs) do
+            pcall(function() bv:Destroy() end)
+            attractBVs[p] = nil
         end
         return
     end
-
     local myChar = LocalPlayer.Character
     local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
     if not myRoot then return end
-
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            local char = p.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            local hum  = char and char:FindFirstChildWhichIsA("Humanoid")
+        if p ~= LocalPlayer and p.Character then
+            local root = p.Character:FindFirstChild("HumanoidRootPart")
+            local hum  = p.Character:FindFirstChildWhichIsA("Humanoid")
             if root and hum and hum.Health > 0 then
                 local diff = myRoot.Position - root.Position
                 local dist = diff.Magnitude
-
                 if dist > 2 then
-                    local dir    = diff.Unit
-                    local speed  = math.clamp(dist * 8, 20, 120)
-
+                    local dir   = diff.Unit
+                    local speed = math.clamp(dist * 10, 30, 150)
                     pcall(function()
-                        local bv = root:FindFirstChild("_AttractBV")
+                        local bv = root:FindFirstChild("_ABV")
                         if not bv then
                             bv          = Instance.new("BodyVelocity")
-                            bv.Name     = "_AttractBV"
+                            bv.Name     = "_ABV"
                             bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
                             bv.P        = 1e9
                             bv.Parent   = root
-                            attractBodyVelocities[p] = bv
+                            attractBVs[p] = bv
                         end
                         bv.Velocity = dir * speed
                     end)
-
                     pcall(function()
                         root.CFrame = root.CFrame:Lerp(
-                            CFrame.new(myRoot.Position + dir * -2, myRoot.Position),
-                            math.min(dt * 6, 1)
+                            CFrame.new(myRoot.Position - dir * 1.5),
+                            math.min(dt * 8, 1)
                         )
                     end)
                 else
                     pcall(function()
-                        local bv = root:FindFirstChild("_AttractBV")
-                        if bv then bv.Velocity = Vector3.new(0, 0, 0) end
+                        if attractBVs[p] then
+                            attractBVs[p].Velocity = Vector3.new(0, 0, 0)
+                        end
                     end)
                 end
             end
@@ -163,65 +178,31 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 Players.PlayerRemoving:Connect(function(p)
-    CleanAttract(p)
-end)
-
-
-local swordSwingTimer = 0
-local SWORD_INTERVAL  = 0.03
-
-RunService.Heartbeat:Connect(function(dt)
-    if not Settings.Other.SwordAuto then return end
-    swordSwingTimer = swordSwingTimer + dt
-    if swordSwingTimer < SWORD_INTERVAL then return end
-    swordSwingTimer = 0
-
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    for _, tool in pairs(char:GetChildren()) do
-        if tool:IsA("Tool") then
-            pcall(function() tool:Activate() end)
-
-            for _, v in pairs(tool:GetDescendants()) do
-                if v:IsA("RemoteEvent") then
-                    local n = v.Name:lower()
-                    if n:find("swing") or n:find("attack") or n:find("slash") or n:find("hit") or n:find("click") then
-                        pcall(function() v:FireServer() end)
-                    end
-                end
-            end
-
-            local rs = tool:FindFirstChild("RemoteEvent") or tool:FindFirstChildWhichIsA("RemoteEvent")
-            if rs then
-                pcall(function() rs:FireServer() end)
-            end
+    pcall(function()
+        if attractBVs[p] then
+            attractBVs[p]:Destroy()
+            attractBVs[p] = nil
         end
-    end
+    end)
 end)
 
-local espConnections = {}
-local espDrawings    = {}
+local espConns = {}
+local espDraw  = {}
 
 local function DestroyESP(player)
-    if espConnections[player] then
-        espConnections[player]:Disconnect()
-        espConnections[player] = nil
+    if espConns[player] then
+        espConns[player]:Disconnect()
+        espConns[player] = nil
     end
-    if espDrawings[player] then
-        for _, d in pairs(espDrawings[player].esp) do
-            pcall(function() d:Remove() end)
-        end
-        for _, d in pairs(espDrawings[player].limbs) do
-            pcall(function() d:Remove() end)
-        end
-        espDrawings[player] = nil
+    if espDraw[player] then
+        for _, d in pairs(espDraw[player].esp) do pcall(function() d:Remove() end) end
+        for _, d in pairs(espDraw[player].limbs) do pcall(function() d:Remove() end) end
+        espDraw[player] = nil
     end
 end
 
 local function CreateFullESP(player)
     DestroyESP(player)
-
     local esp = {
         box       = Drawing.new("Square"),
         line      = Drawing.new("Line"),
@@ -230,9 +211,7 @@ local function CreateFullESP(player)
     }
     local limbs = {}
     for i = 1, 14 do limbs[i] = Drawing.new("Line") end
-
-    espDrawings[player] = { esp = esp, limbs = limbs }
-
+    espDraw[player] = { esp = esp, limbs = limbs }
     esp.box.Filled          = false
     esp.name.Size           = 12
     esp.name.Center         = true
@@ -241,11 +220,11 @@ local function CreateFullESP(player)
 
     local function drawBone(line, p1, p2)
         if p1 and p2 and p1 ~= p2 then
-            local aPos = Camera:WorldToViewportPoint(p1.Position)
-            local bPos = Camera:WorldToViewportPoint(p2.Position)
-            if aPos.Z > 0 and bPos.Z > 0 then
-                line.From      = Vector2.new(aPos.X, aPos.Y)
-                line.To        = Vector2.new(bPos.X, bPos.Y)
+            local a = Camera:WorldToViewportPoint(p1.Position)
+            local b = Camera:WorldToViewportPoint(p2.Position)
+            if a.Z > 0 and b.Z > 0 then
+                line.From      = Vector2.new(a.X, a.Y)
+                line.To        = Vector2.new(b.X, b.Y)
                 line.Color     = currentAutoColor
                 line.Thickness = 0.5
                 line.Visible   = true
@@ -261,33 +240,26 @@ local function CreateFullESP(player)
     end
 
     local function Update()
-        if not espDrawings[player] then return end
+        if not espDraw[player] then return end
         local ok = pcall(function()
             local char = player.Character
             local hum  = char and char:FindFirstChildWhichIsA("Humanoid")
             if not char or not char:FindFirstChild("HumanoidRootPart") or not hum or hum.Health <= 0 then
-                HideAll()
-                return
+                HideAll(); return
             end
-
             local root          = char.HumanoidRootPart
             local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
             local distance      = (Camera.CFrame.Position - root.Position).Magnitude
-
             if onScreen and Settings.ESP.Enabled then
                 local sizeX = math.clamp(1000 / distance, 10, 150)
                 local sizeY = sizeX * 1.6
-
                 if Settings.ESP.Box then
                     esp.box.Visible   = true
                     esp.box.Size      = Vector2.new(sizeX, sizeY)
                     esp.box.Position  = Vector2.new(pos.X - sizeX / 2, pos.Y - sizeY / 2)
                     esp.box.Color     = currentAutoColor
                     esp.box.Thickness = Settings.ESP.Thickness
-                else
-                    esp.box.Visible = false
-                end
-
+                else esp.box.Visible = false end
                 if Settings.ESP.Line then
                     esp.line.Visible = true
                     if Settings.ESP.LinePos == "CENTER" then
@@ -301,66 +273,47 @@ local function CreateFullESP(player)
                     esp.line.Color        = currentAutoColor
                     esp.line.Thickness    = Settings.ESP.Thickness
                     esp.line.Transparency = math.clamp(1 - (distance / 1200), 0.35, 0.95)
-                else
-                    esp.line.Visible = false
-                end
-
+                else esp.line.Visible = false end
                 if Settings.ESP.Health then
                     local hp = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
                     esp.healthBar.Visible = true
                     esp.healthBar.From    = Vector2.new(pos.X - sizeX / 2 - 5, pos.Y + sizeY / 2)
                     esp.healthBar.To      = Vector2.new(pos.X - sizeX / 2 - 5, pos.Y + sizeY / 2 - sizeY * hp)
                     esp.healthBar.Color   = Color3.fromRGB(math.floor(255 - 255 * hp), math.floor(255 * hp), 0)
-                else
-                    esp.healthBar.Visible = false
-                end
-
+                else esp.healthBar.Visible = false end
                 if Settings.ESP.Name then
                     esp.name.Visible  = true
                     esp.name.Text     = player.Name .. " [" .. math.floor(distance) .. "m]"
                     esp.name.Position = Vector2.new(pos.X, pos.Y - sizeY / 2 - 16)
                     esp.name.Color    = currentAutoColor
-                else
-                    esp.name.Visible = false
-                end
-
+                else esp.name.Visible = false end
                 if Settings.ESP.Skeleton then
                     local isR15 = char:FindFirstChild("UpperTorso") ~= nil
                     local bones = {}
                     if isR15 then
-                        local head   = char:FindFirstChild("Head")
-                        local uTorso = char:FindFirstChild("UpperTorso")
-                        local lTorso = char:FindFirstChild("LowerTorso")
-                        local lUA    = char:FindFirstChild("LeftUpperArm")
-                        local lLA    = char:FindFirstChild("LeftLowerArm")
-                        local lHand  = char:FindFirstChild("LeftHand")
-                        local rUA    = char:FindFirstChild("RightUpperArm")
-                        local rLA    = char:FindFirstChild("RightLowerArm")
-                        local rHand  = char:FindFirstChild("RightHand")
-                        local lUL    = char:FindFirstChild("LeftUpperLeg")
-                        local lLL    = char:FindFirstChild("LeftLowerLeg")
-                        local lFoot  = char:FindFirstChild("LeftFoot")
-                        local rUL    = char:FindFirstChild("RightUpperLeg")
-                        local rLL    = char:FindFirstChild("RightLowerLeg")
-                        local rFoot  = char:FindFirstChild("RightFoot")
                         bones = {
-                            {head, uTorso}, {uTorso, lTorso},
-                            {uTorso, lUA}, {lUA, lLA}, {lLA, lHand},
-                            {uTorso, rUA}, {rUA, rLA}, {rLA, rHand},
-                            {lTorso, lUL}, {lUL, lLL}, {lLL, lFoot},
-                            {lTorso, rUL}, {rUL, rLL}, {rLL, rFoot},
+                            {char:FindFirstChild("Head"),         char:FindFirstChild("UpperTorso")},
+                            {char:FindFirstChild("UpperTorso"),   char:FindFirstChild("LowerTorso")},
+                            {char:FindFirstChild("UpperTorso"),   char:FindFirstChild("LeftUpperArm")},
+                            {char:FindFirstChild("LeftUpperArm"), char:FindFirstChild("LeftLowerArm")},
+                            {char:FindFirstChild("LeftLowerArm"), char:FindFirstChild("LeftHand")},
+                            {char:FindFirstChild("UpperTorso"),   char:FindFirstChild("RightUpperArm")},
+                            {char:FindFirstChild("RightUpperArm"),char:FindFirstChild("RightLowerArm")},
+                            {char:FindFirstChild("RightLowerArm"),char:FindFirstChild("RightHand")},
+                            {char:FindFirstChild("LowerTorso"),   char:FindFirstChild("LeftUpperLeg")},
+                            {char:FindFirstChild("LeftUpperLeg"), char:FindFirstChild("LeftLowerLeg")},
+                            {char:FindFirstChild("LeftLowerLeg"), char:FindFirstChild("LeftFoot")},
+                            {char:FindFirstChild("LowerTorso"),   char:FindFirstChild("RightUpperLeg")},
+                            {char:FindFirstChild("RightUpperLeg"),char:FindFirstChild("RightLowerLeg")},
+                            {char:FindFirstChild("RightLowerLeg"),char:FindFirstChild("RightFoot")},
                         }
                     else
-                        local head  = char:FindFirstChild("Head")
-                        local torso = char:FindFirstChild("Torso")
-                        local lArm  = char:FindFirstChild("Left Arm")
-                        local rArm  = char:FindFirstChild("Right Arm")
-                        local lLeg  = char:FindFirstChild("Left Leg")
-                        local rLeg  = char:FindFirstChild("Right Leg")
                         bones = {
-                            {head, torso},
-                            {torso, lArm}, {torso, rArm},
-                            {torso, lLeg}, {torso, rLeg},
+                            {char:FindFirstChild("Head"),     char:FindFirstChild("Torso")},
+                            {char:FindFirstChild("Torso"),    char:FindFirstChild("Left Arm")},
+                            {char:FindFirstChild("Torso"),    char:FindFirstChild("Right Arm")},
+                            {char:FindFirstChild("Torso"),    char:FindFirstChild("Left Leg")},
+                            {char:FindFirstChild("Torso"),    char:FindFirstChild("Right Leg")},
                         }
                     end
                     for i = 1, #limbs do
@@ -376,13 +329,10 @@ local function CreateFullESP(player)
         if not ok then HideAll() end
     end
 
-    espConnections[player] = RunService.RenderStepped:Connect(Update)
-
+    espConns[player] = RunService.RenderStepped:Connect(Update)
     player.CharacterAdded:Connect(function()
         task.wait(1)
-        if player and player.Parent then
-            CreateFullESP(player)
-        end
+        if player and player.Parent then CreateFullESP(player) end
     end)
 end
 
@@ -390,10 +340,7 @@ for _, p in pairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then CreateFullESP(p) end
 end
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then
-        task.wait(1)
-        CreateFullESP(p)
-    end
+    if p ~= LocalPlayer then task.wait(1); CreateFullESP(p) end
 end)
 Players.PlayerRemoving:Connect(function(p)
     DestroyESP(p)
@@ -476,7 +423,7 @@ Title.TextYAlignment   = Enum.TextYAlignment.Center
 Title.ZIndex           = 4
 
 local SubTitle = Instance.new("TextLabel", Header)
-SubTitle.Text             = "v3.4"
+SubTitle.Text             = "v4.0"
 SubTitle.Size             = UDim2.new(0, 40, 1, 0)
 SubTitle.Position         = UDim2.new(0, 108, 0, 0)
 SubTitle.TextColor3       = Color3.fromRGB(50, 70, 130)
@@ -514,12 +461,8 @@ Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
 ToggleStroke.Thickness = 1.5
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-end)
+ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Size                   = UDim2.new(0, 90, 1, -46)
@@ -528,14 +471,12 @@ Sidebar.BackgroundColor3       = Color3.fromRGB(6, 8, 17)
 Sidebar.BackgroundTransparency = 0
 Sidebar.ZIndex                 = 3
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
-
 local SidebarGrad = Instance.new("UIGradient", Sidebar)
 SidebarGrad.Color    = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 10, 22)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 6, 14)),
 })
 SidebarGrad.Rotation = 90
-
 local SidebarList = Instance.new("UIListLayout", Sidebar)
 SidebarList.Padding             = UDim.new(0, 4)
 SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -551,7 +492,7 @@ Container.ClipsDescendants    = true
 Container.ZIndex              = 3
 
 local Pages = {}
-local function CreatePage(tabName)
+local function MakePage(name)
     local page = Instance.new("ScrollingFrame", Container)
     page.Size                    = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency  = 1
@@ -562,68 +503,66 @@ local function CreatePage(tabName)
     page.ScrollingDirection      = Enum.ScrollingDirection.Y
     page.Visible                 = false
     page.ZIndex                  = 3
-    local layout = Instance.new("UIListLayout", page)
-    layout.Padding               = UDim.new(0, 4)
-    layout.SortOrder             = Enum.SortOrder.LayoutOrder
+    local lay = Instance.new("UIListLayout", page)
+    lay.Padding                  = UDim.new(0, 4)
+    lay.SortOrder                = Enum.SortOrder.LayoutOrder
     local pad = Instance.new("UIPadding", page)
-    pad.PaddingTop   = UDim.new(0, 4)
-    pad.PaddingRight = UDim.new(0, 6)
-    Pages[tabName] = page
+    pad.PaddingTop               = UDim.new(0, 4)
+    pad.PaddingRight             = UDim.new(0, 6)
+    Pages[name] = page
     return page
 end
 
-local EspPage   = CreatePage("ESP")
-local AimPage   = CreatePage("AIM")
-local OtherPage = CreatePage("OTHER")
+local EspPage   = MakePage("ESP")
+local AimPage   = MakePage("AIM")
+local OtherPage = MakePage("OTHER")
 
-local TabButtons = {}
-local function SwitchTab(tabName)
-    Settings.CurrentTab = tabName
-    for name, page in pairs(Pages) do
-        page.Visible = (name == tabName)
-    end
-    for name, btn in pairs(TabButtons) do
-        if name == tabName then
-            btn.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
-            btn.TextColor3       = Color3.fromRGB(255, 255, 255)
-            local s = btn:FindFirstChildOfClass("UIStroke")
+local TabBtns = {}
+local function SwitchTab(name)
+    Settings.CurrentTab = name
+    for n, p in pairs(Pages) do p.Visible = (n == name) end
+    for n, b in pairs(TabBtns) do
+        if n == name then
+            b.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+            b.TextColor3       = Color3.fromRGB(255, 255, 255)
+            local s = b:FindFirstChildOfClass("UIStroke")
             if s then s.Color = Color3.fromRGB(0, 140, 255) end
         else
-            btn.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
-            btn.TextColor3       = Color3.fromRGB(110, 115, 145)
-            local s = btn:FindFirstChildOfClass("UIStroke")
+            b.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
+            b.TextColor3       = Color3.fromRGB(110, 115, 145)
+            local s = b:FindFirstChildOfClass("UIStroke")
             if s then s.Color = Color3.fromRGB(20, 22, 40) end
         end
     end
 end
 
-local function AddTabButton(name, icon, label)
-    local btn = Instance.new("TextButton", Sidebar)
-    btn.Size             = UDim2.new(0, 76, 0, 34)
-    btn.Text             = icon .. "  " .. label
-    btn.Font             = Enum.Font.GothamBold
-    btn.TextSize         = 10
-    btn.TextXAlignment   = Enum.TextXAlignment.Left
-    btn.TextColor3       = Color3.fromRGB(110, 115, 145)
-    btn.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
-    btn.ZIndex           = 4
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-    local s = Instance.new("UIStroke", btn)
+local function MakeTabBtn(name, icon, label)
+    local b = Instance.new("TextButton", Sidebar)
+    b.Size             = UDim2.new(0, 76, 0, 34)
+    b.Text             = icon .. "  " .. label
+    b.Font             = Enum.Font.GothamBold
+    b.TextSize         = 10
+    b.TextXAlignment   = Enum.TextXAlignment.Left
+    b.TextColor3       = Color3.fromRGB(110, 115, 145)
+    b.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
+    b.ZIndex           = 4
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+    local s = Instance.new("UIStroke", b)
     s.Color     = Color3.fromRGB(20, 22, 40)
     s.Thickness = 1
-    local pad = Instance.new("UIPadding", btn)
+    local pad = Instance.new("UIPadding", b)
     pad.PaddingLeft = UDim.new(0, 8)
-    btn.MouseButton1Click:Connect(function() SwitchTab(name) end)
-    TabButtons[name] = btn
+    b.MouseButton1Click:Connect(function() SwitchTab(name) end)
+    TabBtns[name] = b
 end
 
-AddTabButton("ESP",   "◈", "ESP")
-AddTabButton("AIM",   "◎", "AIM")
-AddTabButton("OTHER", "⚙", "OTHER")
+MakeTabBtn("ESP",   "◈", "ESP")
+MakeTabBtn("AIM",   "◎", "AIM")
+MakeTabBtn("OTHER", "⚙", "OTHER")
 
-local function MakeCard(page, order)
+local function Card(page, order, h)
     local f = Instance.new("Frame", page)
-    f.Size                   = UDim2.new(1, -2, 0, 38)
+    f.Size                   = UDim2.new(1, -2, 0, h or 38)
     f.BackgroundColor3       = Color3.fromRGB(10, 12, 23)
     f.BackgroundTransparency = 0
     f.ZIndex                 = 4
@@ -635,18 +574,16 @@ local function MakeCard(page, order)
     return f
 end
 
-local function AddToggle(page, name, target, key, order)
-    local f = MakeCard(page, order)
-
+local function Toggle(page, label, tbl, key, order)
+    local f = Card(page, order)
     local accent = Instance.new("Frame", f)
     accent.Size             = UDim2.new(0, 3, 0, 18)
     accent.Position         = UDim2.new(0, 0, 0.5, -9)
     accent.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
     accent.ZIndex           = 5
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
-
     local TL = Instance.new("TextLabel", f)
-    TL.Text              = name
+    TL.Text              = label
     TL.Size              = UDim2.new(0.65, 0, 1, 0)
     TL.Position          = UDim2.new(0, 12, 0, 0)
     TL.Font              = Enum.Font.GothamBold
@@ -655,50 +592,42 @@ local function AddToggle(page, name, target, key, order)
     TL.BackgroundTransparency = 1
     TL.TextXAlignment    = Enum.TextXAlignment.Left
     TL.ZIndex            = 5
-
     local Track = Instance.new("Frame", f)
     Track.Size             = UDim2.new(0, 36, 0, 18)
     Track.Position         = UDim2.new(1, -44, 0.5, -9)
-    Track.BackgroundColor3 = target[key] and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
+    Track.BackgroundColor3 = tbl[key] and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
     Track.ZIndex           = 5
     Instance.new("UICorner", Track).CornerRadius = UDim.new(1, 0)
-
     local Knob = Instance.new("Frame", Track)
     Knob.Size             = UDim2.new(0, 13, 0, 13)
-    Knob.Position         = target[key] and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+    Knob.Position         = tbl[key] and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
     Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Knob.ZIndex           = 6
     Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
-
     local function Refresh()
-        local on = target[key]
+        local on = tbl[key]
         Track.BackgroundColor3  = on and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
         Knob.Position           = on and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
         accent.BackgroundColor3 = on and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(40, 44, 70)
     end
-
     Track.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            target[key] = not target[key]
-            Refresh()
+            tbl[key] = not tbl[key]; Refresh()
         end
     end)
     Refresh()
 end
 
-local function AddSlider(page, name, minVal, maxVal, target, key, order)
-    local f = MakeCard(page, order)
-    f.Size = UDim2.new(1, -2, 0, 46)
-
+local function Slider(page, label, minV, maxV, tbl, key, order)
+    local f = Card(page, order, 46)
     local accent = Instance.new("Frame", f)
     accent.Size             = UDim2.new(0, 3, 0, 18)
     accent.Position         = UDim2.new(0, 0, 0, 10)
     accent.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
     accent.ZIndex           = 5
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
-
     local LT = Instance.new("TextLabel", f)
-    LT.Text              = name .. ":  " .. target[key]
+    LT.Text              = label .. ":  " .. tbl[key]
     LT.Size              = UDim2.new(1, -12, 0, 20)
     LT.Position          = UDim2.new(0, 12, 0, 4)
     LT.Font              = Enum.Font.GothamBold
@@ -707,44 +636,34 @@ local function AddSlider(page, name, minVal, maxVal, target, key, order)
     LT.BackgroundTransparency = 1
     LT.TextXAlignment    = Enum.TextXAlignment.Left
     LT.ZIndex            = 5
-
     local TrackBg = Instance.new("Frame", f)
     TrackBg.Size             = UDim2.new(1, -18, 0, 6)
     TrackBg.Position         = UDim2.new(0, 9, 0, 32)
     TrackBg.BackgroundColor3 = Color3.fromRGB(18, 20, 38)
     TrackBg.ZIndex           = 5
     Instance.new("UICorner", TrackBg).CornerRadius = UDim.new(1, 0)
-
     local Fill = Instance.new("Frame", TrackBg)
-    local pctInit = (target[key] - minVal) / (maxVal - minVal)
-    Fill.Size             = UDim2.new(pctInit, 0, 1, 0)
+    local pi = (tbl[key] - minV) / (maxV - minV)
+    Fill.Size             = UDim2.new(pi, 0, 1, 0)
     Fill.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
     Fill.ZIndex           = 6
     Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
-
-    local FillGrad = Instance.new("UIGradient", Fill)
-    FillGrad.Color    = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 180, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)),
-    })
-    FillGrad.Rotation = 0
-
+    local FG = Instance.new("UIGradient", Fill)
+    FG.Color    = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 180, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 0, 255)) })
+    FG.Rotation = 0
     local Knob = Instance.new("Frame", TrackBg)
     Knob.Size             = UDim2.new(0, 11, 0, 11)
     Knob.AnchorPoint      = Vector2.new(0.5, 0.5)
-    Knob.Position         = UDim2.new(pctInit, 0, 0.5, 0)
+    Knob.Position         = UDim2.new(pi, 0, 0.5, 0)
     Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Knob.ZIndex           = 7
     Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
-
     local function Set(ip)
         local pct = math.clamp((ip.X - TrackBg.AbsolutePosition.X) / TrackBg.AbsoluteSize.X, 0, 1)
-        local val = minVal + pct * (maxVal - minVal)
-        val = maxVal <= 10 and (math.floor(val * 10) / 10) or math.floor(val)
-        target[key]   = val
-        LT.Text       = name .. ":  " .. val
-        Fill.Size     = UDim2.new(pct, 0, 1, 0)
-        Knob.Position = UDim2.new(pct, 0, 0.5, 0)
+        local val = minV + pct * (maxV - minV)
+        val = maxV <= 10 and (math.floor(val * 10) / 10) or math.floor(val)
+        tbl[key] = val; LT.Text = label .. ":  " .. val
+        Fill.Size = UDim2.new(pct, 0, 1, 0); Knob.Position = UDim2.new(pct, 0, 0.5, 0)
     end
     local drag = false
     TrackBg.InputBegan:Connect(function(i)
@@ -764,18 +683,16 @@ local function AddSlider(page, name, minVal, maxVal, target, key, order)
     end)
 end
 
-local function AddSelector(page, name, options, target, key, order)
-    local f = MakeCard(page, order)
-
+local function Selector(page, label, opts, tbl, key, order)
+    local f = Card(page, order)
     local accent = Instance.new("Frame", f)
     accent.Size             = UDim2.new(0, 3, 0, 18)
     accent.Position         = UDim2.new(0, 0, 0.5, -9)
     accent.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
     accent.ZIndex           = 5
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
-
     local TL = Instance.new("TextLabel", f)
-    TL.Text              = name
+    TL.Text              = label
     TL.Size              = UDim2.new(0.48, 0, 1, 0)
     TL.Position          = UDim2.new(0, 12, 0, 0)
     TL.Font              = Enum.Font.GothamBold
@@ -784,7 +701,6 @@ local function AddSelector(page, name, options, target, key, order)
     TL.BackgroundTransparency = 1
     TL.TextXAlignment    = Enum.TextXAlignment.Left
     TL.ZIndex            = 5
-
     local Btn = Instance.new("TextButton", f)
     Btn.Font             = Enum.Font.GothamBold
     Btn.TextSize         = 9
@@ -795,121 +711,104 @@ local function AddSelector(page, name, options, target, key, order)
     Btn.ZIndex           = 5
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
     local BS = Instance.new("UIStroke", Btn)
-    BS.Color     = Color3.fromRGB(0, 80, 180)
-    BS.Thickness = 1
-
+    BS.Color = Color3.fromRGB(0, 80, 180); BS.Thickness = 1
     local idx = 1
-    for i, v in ipairs(options) do if target[key] == v then idx = i break end end
-    local function Upd() target[key] = options[idx]; Btn.Text = "‹ " .. options[idx] .. " ›" end
-    Btn.MouseButton1Click:Connect(function() idx = (idx % #options) + 1; Upd() end)
+    for i, v in ipairs(opts) do if tbl[key] == v then idx = i break end end
+    local function Upd() tbl[key] = opts[idx]; Btn.Text = "‹ " .. opts[idx] .. " ›" end
+    Btn.MouseButton1Click:Connect(function() idx = (idx % #opts) + 1; Upd() end)
     Upd()
 end
 
-AddToggle(EspPage,   "MASTER ESP",   Settings.ESP, "Enabled",       1)
-AddToggle(EspPage,   "BOX",          Settings.ESP, "Box",           2)
-AddToggle(EspPage,   "SKELETON",     Settings.ESP, "Skeleton",      3)
-AddToggle(EspPage,   "NAME TAG",     Settings.ESP, "Name",          4)
-AddToggle(EspPage,   "HEALTH BAR",   Settings.ESP, "Health",        5)
-AddToggle(EspPage,   "TRACER LINE",  Settings.ESP, "Line",          6)
-AddSelector(EspPage, "LINE POS",     {"TOP", "CENTER", "BOTTOM"}, Settings.ESP, "LinePos", 7)
-AddSlider(EspPage,   "THICKNESS",    0.5, 3, Settings.ESP, "Thickness", 8)
+Toggle(EspPage,   "MASTER ESP",   Settings.ESP, "Enabled",   1)
+Toggle(EspPage,   "BOX",          Settings.ESP, "Box",        2)
+Toggle(EspPage,   "SKELETON",     Settings.ESP, "Skeleton",   3)
+Toggle(EspPage,   "NAME TAG",     Settings.ESP, "Name",       4)
+Toggle(EspPage,   "HEALTH BAR",   Settings.ESP, "Health",     5)
+Toggle(EspPage,   "TRACER LINE",  Settings.ESP, "Line",       6)
+Selector(EspPage, "LINE POS", {"TOP","CENTER","BOTTOM"}, Settings.ESP, "LinePos", 7)
+Slider(EspPage,   "THICKNESS", 0.5, 3, Settings.ESP, "Thickness", 8)
 
-AddToggle(AimPage,  "SILENT AIM",      Settings.Aim, "SilentAim",      1)
-AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander", 2)
-AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize", 3)
+Toggle(AimPage,  "SILENT AIM",      Settings.Aim, "SilentAim",      1)
+Toggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander", 2)
+Slider(AimPage,  "HITBOX SIZE", 1, 30, Settings.Aim, "HitboxSize",  3)
 
-AddToggle(OtherPage, "SWORD",           Settings.Other, "SwordAuto",      1)
-AddToggle(OtherPage, "ATTRACT PLAYERS", Settings.Other, "AttractPlayers", 2)
+Toggle(OtherPage, "SWORD",           Settings.Other, "SwordAuto",      1)
+Toggle(OtherPage, "ATTRACT PLAYERS", Settings.Other, "AttractPlayers", 2)
 
-local tereptolHeader = MakeCard(OtherPage, 3)
-tereptolHeader.BackgroundColor3 = Color3.fromRGB(6, 8, 18)
-local tereptolAccent = Instance.new("Frame", tereptolHeader)
-tereptolAccent.Size             = UDim2.new(0, 3, 0, 18)
-tereptolAccent.Position         = UDim2.new(0, 0, 0.5, -9)
-tereptolAccent.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
-tereptolAccent.ZIndex           = 5
-Instance.new("UICorner", tereptolAccent).CornerRadius = UDim.new(1, 0)
-local tereptolTitle = Instance.new("TextLabel", tereptolHeader)
-tereptolTitle.Text              = "TEREPTOL"
-tereptolTitle.Size              = UDim2.new(1, -12, 1, 0)
-tereptolTitle.Position          = UDim2.new(0, 12, 0, 0)
-tereptolTitle.Font              = Enum.Font.GothamBold
-tereptolTitle.TextSize          = 10
-tereptolTitle.TextColor3        = Color3.fromRGB(0, 180, 255)
-tereptolTitle.BackgroundTransparency = 1
-tereptolTitle.TextXAlignment    = Enum.TextXAlignment.Left
-tereptolTitle.ZIndex            = 5
+local tpHeader = Card(OtherPage, 3)
+tpHeader.BackgroundColor3 = Color3.fromRGB(6, 8, 18)
+local tpAcc = Instance.new("Frame", tpHeader)
+tpAcc.Size             = UDim2.new(0, 3, 0, 18)
+tpAcc.Position         = UDim2.new(0, 0, 0.5, -9)
+tpAcc.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+tpAcc.ZIndex           = 5
+Instance.new("UICorner", tpAcc).CornerRadius = UDim.new(1, 0)
+local tpTitleLbl = Instance.new("TextLabel", tpHeader)
+tpTitleLbl.Text              = "TEREPTOL"
+tpTitleLbl.Size              = UDim2.new(1, -12, 1, 0)
+tpTitleLbl.Position          = UDim2.new(0, 12, 0, 0)
+tpTitleLbl.Font              = Enum.Font.GothamBold
+tpTitleLbl.TextSize          = 10
+tpTitleLbl.TextColor3        = Color3.fromRGB(0, 180, 255)
+tpTitleLbl.BackgroundTransparency = 1
+tpTitleLbl.TextXAlignment    = Enum.TextXAlignment.Left
+tpTitleLbl.ZIndex            = 5
 
-local playerCardOrder = 4
-local playerCards = {}
+local pCardOrder = 4
+local pCards     = {}
 
-local function RemovePlayerCard(player)
-    if playerCards[player] then
-        playerCards[player]:Destroy()
-        playerCards[player] = nil
-    end
+local function RemoveCard(p)
+    if pCards[p] then pCards[p]:Destroy(); pCards[p] = nil end
 end
 
-local function AddPlayerCard(player)
-    RemovePlayerCard(player)
+local function AddCard(p)
+    RemoveCard(p)
     local f = Instance.new("Frame", OtherPage)
     f.Size                   = UDim2.new(1, -2, 0, 38)
     f.BackgroundColor3       = Color3.fromRGB(8, 11, 22)
     f.BackgroundTransparency = 0
     f.ZIndex                 = 4
-    f.LayoutOrder            = playerCardOrder
-    playerCardOrder          = playerCardOrder + 1
+    f.LayoutOrder            = pCardOrder
+    pCardOrder               = pCardOrder + 1
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", f)
-    s.Color     = Color3.fromRGB(0, 60, 140)
-    s.Thickness = 1
-
-    local nameLabel = Instance.new("TextLabel", f)
-    nameLabel.Text              = "→  " .. player.Name
-    nameLabel.Size              = UDim2.new(0.6, 0, 1, 0)
-    nameLabel.Position          = UDim2.new(0, 10, 0, 0)
-    nameLabel.Font              = Enum.Font.GothamBold
-    nameLabel.TextSize          = 10
-    nameLabel.TextColor3        = Color3.fromRGB(160, 200, 255)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.TextXAlignment    = Enum.TextXAlignment.Left
-    nameLabel.ZIndex            = 5
-
-    local tpBtn = Instance.new("TextButton", f)
-    tpBtn.Text             = "TP"
-    tpBtn.Font             = Enum.Font.GothamBold
-    tpBtn.TextSize         = 9
-    tpBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
-    tpBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
-    tpBtn.Size             = UDim2.new(0, 44, 0, 24)
-    tpBtn.Position         = UDim2.new(1, -52, 0.5, -12)
-    tpBtn.ZIndex           = 5
-    Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(0, 6)
-    tpBtn.MouseButton1Click:Connect(function()
-        local myChar    = LocalPlayer.Character
-        local myRoot    = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        local theirChar = player.Character
-        local theirRoot = theirChar and theirChar:FindFirstChild("HumanoidRootPart")
-        if myRoot and theirRoot then
-            myRoot.CFrame = theirRoot.CFrame + Vector3.new(0, 3, 0)
-        end
+    s.Color = Color3.fromRGB(0, 60, 140); s.Thickness = 1
+    local nl = Instance.new("TextLabel", f)
+    nl.Text              = "→  " .. p.Name
+    nl.Size              = UDim2.new(0.6, 0, 1, 0)
+    nl.Position          = UDim2.new(0, 10, 0, 0)
+    nl.Font              = Enum.Font.GothamBold
+    nl.TextSize          = 10
+    nl.TextColor3        = Color3.fromRGB(160, 200, 255)
+    nl.BackgroundTransparency = 1
+    nl.TextXAlignment    = Enum.TextXAlignment.Left
+    nl.ZIndex            = 5
+    local tb = Instance.new("TextButton", f)
+    tb.Text             = "TP"
+    tb.Font             = Enum.Font.GothamBold
+    tb.TextSize         = 9
+    tb.TextColor3       = Color3.fromRGB(255, 255, 255)
+    tb.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+    tb.Size             = UDim2.new(0, 44, 0, 24)
+    tb.Position         = UDim2.new(1, -52, 0.5, -12)
+    tb.ZIndex           = 5
+    Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 6)
+    tb.MouseButton1Click:Connect(function()
+        local mr = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local tr = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+        if mr and tr then mr.CFrame = tr.CFrame + Vector3.new(0, 3, 0) end
     end)
-
-    playerCards[player] = f
+    pCards[p] = f
 end
 
 for _, p in pairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then AddPlayerCard(p) end
+    if p ~= LocalPlayer then AddCard(p) end
 end
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then
-        task.wait(0.5)
-        AddPlayerCard(p)
-    end
+    if p ~= LocalPlayer then task.wait(0.5); AddCard(p) end
 end)
 Players.PlayerRemoving:Connect(function(p)
-    task.wait(0.1)
-    RemovePlayerCard(p)
+    task.wait(0.1); RemoveCard(p)
 end)
 
 RunService.RenderStepped:Connect(function()
