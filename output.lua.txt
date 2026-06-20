@@ -513,7 +513,8 @@ local function CreatePage(tabName)
     local page = Instance.new("ScrollingFrame", Container)
     page.Size                 = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency = 1
-    page.CanvasSize           = UDim2.new(0, 0, 3, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.CanvasSize           = UDim2.new(0, 0, 0, 0)
     page.ScrollBarThickness   = 2
     page.ScrollBarImageColor3 = Color3.fromRGB(0, 140, 255)
     page.Visible              = false
