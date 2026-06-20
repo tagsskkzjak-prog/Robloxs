@@ -1,7 +1,7 @@
 local Settings = {
     ESP = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
     Aim = { SilentAim = false, HitboxExpander = false, HitboxSize = 10 },
-    Other = { AttractPlayers = false },
+    Other = { AttractPlayers = false, SwordAuto = false },
     CurrentTab = "ESP"
 }
 
@@ -164,6 +164,40 @@ end)
 
 Players.PlayerRemoving:Connect(function(p)
     CleanAttract(p)
+end)
+
+
+local swordSwingTimer = 0
+local SWORD_INTERVAL  = 0.03
+
+RunService.Heartbeat:Connect(function(dt)
+    if not Settings.Other.SwordAuto then return end
+    swordSwingTimer = swordSwingTimer + dt
+    if swordSwingTimer < SWORD_INTERVAL then return end
+    swordSwingTimer = 0
+
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    for _, tool in pairs(char:GetChildren()) do
+        if tool:IsA("Tool") then
+            pcall(function() tool:Activate() end)
+
+            for _, v in pairs(tool:GetDescendants()) do
+                if v:IsA("RemoteEvent") then
+                    local n = v.Name:lower()
+                    if n:find("swing") or n:find("attack") or n:find("slash") or n:find("hit") or n:find("click") then
+                        pcall(function() v:FireServer() end)
+                    end
+                end
+            end
+
+            local rs = tool:FindFirstChild("RemoteEvent") or tool:FindFirstChildWhichIsA("RemoteEvent")
+            if rs then
+                pcall(function() rs:FireServer() end)
+            end
+        end
+    end
 end)
 
 local espConnections = {}
@@ -784,9 +818,10 @@ AddToggle(AimPage,  "SILENT AIM",      Settings.Aim, "SilentAim",      1)
 AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander", 2)
 AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize", 3)
 
-AddToggle(OtherPage, "ATTRACT PLAYERS", Settings.Other, "AttractPlayers", 1)
+AddToggle(OtherPage, "SWORD",           Settings.Other, "SwordAuto",      1)
+AddToggle(OtherPage, "ATTRACT PLAYERS", Settings.Other, "AttractPlayers", 2)
 
-local tereptolHeader = MakeCard(OtherPage, 2)
+local tereptolHeader = MakeCard(OtherPage, 3)
 tereptolHeader.BackgroundColor3 = Color3.fromRGB(6, 8, 18)
 local tereptolAccent = Instance.new("Frame", tereptolHeader)
 tereptolAccent.Size             = UDim2.new(0, 3, 0, 18)
@@ -805,7 +840,7 @@ tereptolTitle.BackgroundTransparency = 1
 tereptolTitle.TextXAlignment    = Enum.TextXAlignment.Left
 tereptolTitle.ZIndex            = 5
 
-local playerCardOrder = 3
+local playerCardOrder = 4
 local playerCards = {}
 
 local function RemovePlayerCard(player)
