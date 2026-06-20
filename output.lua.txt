@@ -1,6 +1,7 @@
 local Settings = {
     ESP = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
     Aim = { SilentAim = false, HitboxExpander = false, HitboxSize = 10 },
+    Other = { AttractPlayers = false, Speed = 16, NoReloading = false, AttackSpeed = false },
     CurrentTab = "ESP"
 }
 
@@ -59,10 +60,10 @@ RunService.RenderStepped:Connect(function()
             if root then
                 if Settings.Aim.HitboxExpander then
                     local sz = Settings.Aim.HitboxSize
-                    root.Size        = Vector3.new(sz, sz, sz)
+                    root.Size         = Vector3.new(sz, sz, sz)
                     root.Transparency = 0.85
                 else
-                    root.Size        = Vector3.new(2, 2, 1)
+                    root.Size         = Vector3.new(2, 2, 1)
                     root.Transparency = 1
                 end
             end
@@ -71,12 +72,26 @@ RunService.RenderStepped:Connect(function()
 end)
 
 local espConnections = {}
+local espDrawings    = {}
 
-local function CreateFullESP(player)
+local function DestroyESP(player)
     if espConnections[player] then
         espConnections[player]:Disconnect()
         espConnections[player] = nil
     end
+    if espDrawings[player] then
+        for _, d in pairs(espDrawings[player].esp) do
+            pcall(function() d:Remove() end)
+        end
+        for _, d in pairs(espDrawings[player].limbs) do
+            pcall(function() d:Remove() end)
+        end
+        espDrawings[player] = nil
+    end
+end
+
+local function CreateFullESP(player)
+    DestroyESP(player)
 
     local esp = {
         box       = Drawing.new("Square"),
@@ -86,6 +101,9 @@ local function CreateFullESP(player)
     }
     local limbs = {}
     for i = 1, 14 do limbs[i] = Drawing.new("Line") end
+
+    espDrawings[player] = { esp = esp, limbs = limbs }
+
     esp.box.Filled          = false
     esp.name.Size           = 12
     esp.name.Center         = true
@@ -93,12 +111,12 @@ local function CreateFullESP(player)
     esp.healthBar.Thickness = 1.5
 
     local function drawBone(line, p1, p2)
-        if p1 and p2 and p1 ~= p2 and Settings.ESP.Enabled and Settings.ESP.Skeleton then
-            local a = Camera:WorldToViewportPoint(p1.Position)
-            local b = Camera:WorldToViewportPoint(p2.Position)
-            if a.Z > 0 and b.Z > 0 then
-                line.From      = Vector2.new(a.X, a.Y)
-                line.To        = Vector2.new(b.X, b.Y)
+        if p1 and p2 and p1 ~= p2 then
+            local aPos = Camera:WorldToViewportPoint(p1.Position)
+            local bPos = Camera:WorldToViewportPoint(p2.Position)
+            if aPos.Z > 0 and bPos.Z > 0 then
+                line.From      = Vector2.new(aPos.X, aPos.Y)
+                line.To        = Vector2.new(bPos.X, bPos.Y)
                 line.Color     = currentAutoColor
                 line.Thickness = 0.5
                 line.Visible   = true
@@ -114,11 +132,13 @@ local function CreateFullESP(player)
     end
 
     local function Update()
+        if not espDrawings[player] then return end
         local ok = pcall(function()
             local char = player.Character
-            local hum  = char and char:FindFirstChild("Humanoid")
-            if not char or not char:FindFirstChild("HumanoidRootPart") or not hum then
-                HideAll(); return
+            local hum  = char and char:FindFirstChildWhichIsA("Humanoid")
+            if not char or not char:FindFirstChild("HumanoidRootPart") or not hum or hum.Health <= 0 then
+                HideAll()
+                return
             end
 
             local root          = char.HumanoidRootPart
@@ -134,8 +154,10 @@ local function CreateFullESP(player)
                     esp.box.Size      = Vector2.new(sizeX, sizeY)
                     esp.box.Position  = Vector2.new(pos.X - sizeX / 2, pos.Y - sizeY / 2)
                     esp.box.Color     = currentAutoColor
-                    esp.box.Thickness = 0.5
-                else esp.box.Visible = false end
+                    esp.box.Thickness = Settings.ESP.Thickness
+                else
+                    esp.box.Visible = false
+                end
 
                 if Settings.ESP.Line then
                     esp.line.Visible = true
@@ -148,9 +170,11 @@ local function CreateFullESP(player)
                     end
                     esp.line.To           = Vector2.new(pos.X, pos.Y - sizeY / 2)
                     esp.line.Color        = currentAutoColor
-                    esp.line.Thickness    = 0.5
+                    esp.line.Thickness    = Settings.ESP.Thickness
                     esp.line.Transparency = math.clamp(1 - (distance / 1200), 0.35, 0.95)
-                else esp.line.Visible = false end
+                else
+                    esp.line.Visible = false
+                end
 
                 if Settings.ESP.Health then
                     local hp = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
@@ -158,67 +182,78 @@ local function CreateFullESP(player)
                     esp.healthBar.From    = Vector2.new(pos.X - sizeX / 2 - 5, pos.Y + sizeY / 2)
                     esp.healthBar.To      = Vector2.new(pos.X - sizeX / 2 - 5, pos.Y + sizeY / 2 - sizeY * hp)
                     esp.healthBar.Color   = Color3.fromRGB(math.floor(255 - 255 * hp), math.floor(255 * hp), 0)
-                else esp.healthBar.Visible = false end
+                else
+                    esp.healthBar.Visible = false
+                end
 
                 if Settings.ESP.Name then
                     esp.name.Visible  = true
                     esp.name.Text     = player.Name .. " [" .. math.floor(distance) .. "m]"
                     esp.name.Position = Vector2.new(pos.X, pos.Y - sizeY / 2 - 16)
                     esp.name.Color    = currentAutoColor
-                else esp.name.Visible = false end
+                else
+                    esp.name.Visible = false
+                end
+
+                if Settings.ESP.Skeleton then
+                    local isR15 = char:FindFirstChild("UpperTorso") ~= nil
+                    local bones = {}
+                    if isR15 then
+                        local head   = char:FindFirstChild("Head")
+                        local uTorso = char:FindFirstChild("UpperTorso")
+                        local lTorso = char:FindFirstChild("LowerTorso")
+                        local lUA    = char:FindFirstChild("LeftUpperArm")
+                        local lLA    = char:FindFirstChild("LeftLowerArm")
+                        local lHand  = char:FindFirstChild("LeftHand")
+                        local rUA    = char:FindFirstChild("RightUpperArm")
+                        local rLA    = char:FindFirstChild("RightLowerArm")
+                        local rHand  = char:FindFirstChild("RightHand")
+                        local lUL    = char:FindFirstChild("LeftUpperLeg")
+                        local lLL    = char:FindFirstChild("LeftLowerLeg")
+                        local lFoot  = char:FindFirstChild("LeftFoot")
+                        local rUL    = char:FindFirstChild("RightUpperLeg")
+                        local rLL    = char:FindFirstChild("RightLowerLeg")
+                        local rFoot  = char:FindFirstChild("RightFoot")
+                        bones = {
+                            {head, uTorso}, {uTorso, lTorso},
+                            {uTorso, lUA}, {lUA, lLA}, {lLA, lHand},
+                            {uTorso, rUA}, {rUA, rLA}, {rLA, rHand},
+                            {lTorso, lUL}, {lUL, lLL}, {lLL, lFoot},
+                            {lTorso, rUL}, {rUL, rLL}, {rLL, rFoot},
+                        }
+                    else
+                        local head  = char:FindFirstChild("Head")
+                        local torso = char:FindFirstChild("Torso")
+                        local lArm  = char:FindFirstChild("Left Arm")
+                        local rArm  = char:FindFirstChild("Right Arm")
+                        local lLeg  = char:FindFirstChild("Left Leg")
+                        local rLeg  = char:FindFirstChild("Right Leg")
+                        bones = {
+                            {head, torso},
+                            {torso, lArm}, {torso, rArm},
+                            {torso, lLeg}, {torso, rLeg},
+                        }
+                    end
+                    for i = 1, #limbs do
+                        drawBone(limbs[i], bones[i] and bones[i][1], bones[i] and bones[i][2])
+                    end
+                else
+                    for i = 1, #limbs do limbs[i].Visible = false end
+                end
             else
                 HideAll()
-            end
-
-            local isR15 = char:FindFirstChild("UpperTorso") ~= nil
-            local bones = {}
-            if isR15 then
-                local head   = char:FindFirstChild("Head")
-                local uTorso = char:FindFirstChild("UpperTorso")
-                local lTorso = char:FindFirstChild("LowerTorso")
-                local lUA    = char:FindFirstChild("LeftUpperArm")
-                local lLA    = char:FindFirstChild("LeftLowerArm")
-                local lHand  = char:FindFirstChild("LeftHand")
-                local rUA    = char:FindFirstChild("RightUpperArm")
-                local rLA    = char:FindFirstChild("RightLowerArm")
-                local rHand  = char:FindFirstChild("RightHand")
-                local lUL    = char:FindFirstChild("LeftUpperLeg")
-                local lLL    = char:FindFirstChild("LeftLowerLeg")
-                local lFoot  = char:FindFirstChild("LeftFoot")
-                local rUL    = char:FindFirstChild("RightUpperLeg")
-                local rLL    = char:FindFirstChild("RightLowerLeg")
-                local rFoot  = char:FindFirstChild("RightFoot")
-                bones = {
-                    {head, uTorso}, {uTorso, lTorso},
-                    {uTorso, lUA}, {lUA, lLA}, {lLA, lHand},
-                    {uTorso, rUA}, {rUA, rLA}, {rLA, rHand},
-                    {lTorso, lUL}, {lUL, lLL}, {lLL, lFoot},
-                    {lTorso, rUL}, {rUL, rLL}, {rLL, rFoot},
-                }
-            else
-                local head  = char:FindFirstChild("Head")
-                local torso = char:FindFirstChild("Torso")
-                local lArm  = char:FindFirstChild("Left Arm")
-                local rArm  = char:FindFirstChild("Right Arm")
-                local lLeg  = char:FindFirstChild("Left Leg")
-                local rLeg  = char:FindFirstChild("Right Leg")
-                bones = {
-                    {head, torso},
-                    {torso, lArm}, {torso, rArm},
-                    {torso, lLeg}, {torso, rLeg},
-                }
-            end
-            for i = 1, #limbs do
-                drawBone(limbs[i], bones[i] and bones[i][1], bones[i] and bones[i][2])
             end
         end)
         if not ok then HideAll() end
     end
 
     espConnections[player] = RunService.RenderStepped:Connect(Update)
+
     player.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        CreateFullESP(player)
+        task.wait(1)
+        if player and player.Parent then
+            CreateFullESP(player)
+        end
     end)
 end
 
@@ -226,12 +261,99 @@ for _, p in pairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then CreateFullESP(p) end
 end
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then CreateFullESP(p) end
+    if p ~= LocalPlayer then
+        task.wait(1)
+        CreateFullESP(p)
+    end
 end)
 Players.PlayerRemoving:Connect(function(p)
-    if espConnections[p] then
-        espConnections[p]:Disconnect()
-        espConnections[p] = nil
+    DestroyESP(p)
+end)
+
+RunService.RenderStepped:Connect(function()
+    if Settings.Other.AttractPlayers then
+        local myChar = LocalPlayer.Character
+        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local theirRoot = p.Character:FindFirstChild("HumanoidRootPart")
+                    if theirRoot then
+                        local dir = (myRoot.Position - theirRoot.Position)
+                        if dir.Magnitude > 3 then
+                            theirRoot.CFrame = theirRoot.CFrame + dir.Unit * 2
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if Settings.Other.NoReloading then
+        local myChar = LocalPlayer.Character
+        if myChar then
+            for _, tool in pairs(myChar:GetChildren()) do
+                if tool:IsA("Tool") then
+                    pcall(function()
+                        if tool:FindFirstChild("RemoteEvent") then
+                            for _, v in pairs(tool:GetDescendants()) do
+                                if v.Name:lower():find("reload") or v.Name:lower():find("star") or v.Name:lower():find("ammo") then
+                                    if v:IsA("NumberValue") or v:IsA("IntValue") then
+                                        v.Value = 999
+                                    end
+                                end
+                            end
+                        end
+                        for _, v in pairs(tool:GetDescendants()) do
+                            if v:IsA("NumberValue") or v:IsA("IntValue") then
+                                if v.Name:lower():find("reload") or v.Name:lower():find("star") or v.Name:lower():find("ammo") then
+                                    v.Value = 999
+                                end
+                            end
+                        end
+                    end)
+                end
+            end
+            for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
+                if item:IsA("Tool") then
+                    pcall(function()
+                        for _, v in pairs(item:GetDescendants()) do
+                            if v:IsA("NumberValue") or v:IsA("IntValue") then
+                                if v.Name:lower():find("reload") or v.Name:lower():find("star") or v.Name:lower():find("ammo") then
+                                    v.Value = 999
+                                end
+                            end
+                        end
+                    end)
+                end
+            end
+        end
+    end
+
+    if Settings.Other.AttackSpeed then
+        local myChar = LocalPlayer.Character
+        if myChar then
+            for _, tool in pairs(myChar:GetChildren()) do
+                if tool:IsA("Tool") then
+                    pcall(function()
+                        for _, v in pairs(tool:GetDescendants()) do
+                            if v:IsA("NumberValue") or v:IsA("IntValue") then
+                                local n = v.Name:lower()
+                                if n:find("firerate") or n:find("attackspeed") or n:find("cooldown") or n:find("delay") or n:find("speed") then
+                                    v.Value = 0.01
+                                end
+                            end
+                        end
+                    end)
+                end
+            end
+        end
+    end
+
+    local myChar = LocalPlayer.Character
+    local myHum = myChar and myChar:FindFirstChildWhichIsA("Humanoid")
+    if myHum and Settings.Other.Speed ~= 16 then
+        myHum.WalkSpeed = Settings.Other.Speed
     end
 end)
 
@@ -240,8 +362,8 @@ ScreenGui.Name         = "呵呵"
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size                   = UDim2.new(0, 420, 0, 250)
-MainFrame.Position               = UDim2.new(0.5, -210, 0.5, -125)
+MainFrame.Size                   = UDim2.new(0, 420, 0, 280)
+MainFrame.Position               = UDim2.new(0.5, -210, 0.5, -140)
 MainFrame.BackgroundColor3       = Color3.fromRGB(8, 9, 18)
 MainFrame.BackgroundTransparency = 0
 MainFrame.Visible                = false
@@ -291,13 +413,13 @@ LogoGrad.Color    = ColorSequence.new({
 LogoGrad.Rotation = 45
 
 local LogoLabel = Instance.new("TextLabel", LogoCircle)
-LogoLabel.Size                  = UDim2.new(1, 0, 1, 0)
+LogoLabel.Size                   = UDim2.new(1, 0, 1, 0)
 LogoLabel.BackgroundTransparency = 1
-LogoLabel.Text                  = "呵"
-LogoLabel.Font                  = Enum.Font.GothamBold
-LogoLabel.TextSize              = 11
-LogoLabel.TextColor3            = Color3.fromRGB(255, 255, 255)
-LogoLabel.ZIndex                = 6
+LogoLabel.Text                   = "呵"
+LogoLabel.Font                   = Enum.Font.GothamBold
+LogoLabel.TextSize               = 11
+LogoLabel.TextColor3             = Color3.fromRGB(255, 255, 255)
+LogoLabel.ZIndex                 = 6
 
 local Title = Instance.new("TextLabel", Header)
 Title.Text             = "呵呵"
@@ -312,7 +434,7 @@ Title.TextYAlignment   = Enum.TextYAlignment.Center
 Title.ZIndex           = 4
 
 local SubTitle = Instance.new("TextLabel", Header)
-SubTitle.Text             = "v3.1"
+SubTitle.Text             = "v3.2"
 SubTitle.Size             = UDim2.new(0, 40, 1, 0)
 SubTitle.Position         = UDim2.new(0, 108, 0, 0)
 SubTitle.TextColor3       = Color3.fromRGB(50, 70, 130)
@@ -405,8 +527,9 @@ local function CreatePage(tabName)
     return page, layout
 end
 
-local EspPage, EspLayout = CreatePage("ESP")
-local AimPage, AimLayout = CreatePage("AIM")
+local EspPage,   EspLayout   = CreatePage("ESP")
+local AimPage,   AimLayout   = CreatePage("AIM")
+local OtherPage, OtherLayout = CreatePage("OTHER")
 
 local TabButtons = {}
 local function SwitchTab(tabName)
@@ -416,13 +539,13 @@ local function SwitchTab(tabName)
     end
     for name, btn in pairs(TabButtons) do
         if name == tabName then
-            btn.BackgroundColor3       = Color3.fromRGB(0, 80, 200)
-            btn.TextColor3             = Color3.fromRGB(255, 255, 255)
+            btn.BackgroundColor3 = Color3.fromRGB(0, 80, 200)
+            btn.TextColor3       = Color3.fromRGB(255, 255, 255)
             local s = btn:FindFirstChildOfClass("UIStroke")
             if s then s.Color = Color3.fromRGB(0, 140, 255) end
         else
-            btn.BackgroundColor3       = Color3.fromRGB(10, 12, 24)
-            btn.TextColor3             = Color3.fromRGB(110, 115, 145)
+            btn.BackgroundColor3 = Color3.fromRGB(10, 12, 24)
+            btn.TextColor3       = Color3.fromRGB(110, 115, 145)
             local s = btn:FindFirstChildOfClass("UIStroke")
             if s then s.Color = Color3.fromRGB(20, 22, 40) end
         end
@@ -449,8 +572,9 @@ local function AddTabButton(name, icon, label)
     TabButtons[name] = btn
 end
 
-AddTabButton("ESP", "◈", "ESP")
-AddTabButton("AIM", "◎", "AIM")
+AddTabButton("ESP",   "◈", "ESP")
+AddTabButton("AIM",   "◎", "AIM")
+AddTabButton("OTHER", "⚙", "OTHER")
 
 local function MakeCard(page)
     local f = Instance.new("Frame", page)
@@ -502,8 +626,8 @@ local function AddToggle(page, name, target, key)
 
     local function Refresh()
         local on = target[key]
-        Track.BackgroundColor3 = on and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
-        Knob.Position = on and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+        Track.BackgroundColor3  = on and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
+        Knob.Position           = on and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
         accent.BackgroundColor3 = on and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(40, 44, 70)
     end
 
@@ -648,9 +772,99 @@ AddToggle(AimPage,  "SILENT AIM",      Settings.Aim, "SilentAim")
 AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander")
 AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize")
 
+AddToggle(OtherPage, "ATTRACT PLAYERS", Settings.Other, "AttractPlayers")
+
+local tereptolCard = MakeCard(OtherPage)
+tereptolCard.Size = UDim2.new(1, -2, 0, 90)
+
+local tereptolAccent = Instance.new("Frame", tereptolCard)
+tereptolAccent.Size             = UDim2.new(0, 3, 0, 18)
+tereptolAccent.Position         = UDim2.new(0, 0, 0, 6)
+tereptolAccent.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+tereptolAccent.ZIndex           = 5
+Instance.new("UICorner", tereptolAccent).CornerRadius = UDim.new(1, 0)
+
+local tereptolLabel = Instance.new("TextLabel", tereptolCard)
+tereptolLabel.Text              = "TEREPTOL"
+tereptolLabel.Size              = UDim2.new(1, -12, 0, 20)
+tereptolLabel.Position          = UDim2.new(0, 12, 0, 4)
+tereptolLabel.Font              = Enum.Font.GothamBold
+tereptolLabel.TextSize          = 10
+tereptolLabel.TextColor3        = Color3.fromRGB(200, 205, 225)
+tereptolLabel.BackgroundTransparency = 1
+tereptolLabel.TextXAlignment    = Enum.TextXAlignment.Left
+tereptolLabel.ZIndex            = 5
+
+local tereptolScroll = Instance.new("ScrollingFrame", tereptolCard)
+tereptolScroll.Size                 = UDim2.new(1, -8, 0, 62)
+tereptolScroll.Position             = UDim2.new(0, 4, 0, 26)
+tereptolScroll.BackgroundTransparency = 1
+tereptolScroll.CanvasSize           = UDim2.new(0, 0, 0, 0)
+tereptolScroll.ScrollBarThickness   = 2
+tereptolScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 140, 255)
+tereptolScroll.ZIndex               = 5
+
+local tereptolList = Instance.new("UIListLayout", tereptolScroll)
+tereptolList.Padding             = UDim.new(0, 3)
+tereptolList.FillDirection       = Enum.FillDirection.Horizontal
+tereptolList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+tereptolList.WrapsToNewLine      = true
+
+local tereptolButtons = {}
+
+local function RebuildTereptolButtons()
+    for _, b in pairs(tereptolButtons) do
+        pcall(function() b:Destroy() end)
+    end
+    tereptolButtons = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local btn = Instance.new("TextButton", tereptolScroll)
+            btn.Text             = p.Name
+            btn.Font             = Enum.Font.GothamBold
+            btn.TextSize         = 8
+            btn.TextColor3       = Color3.fromRGB(0, 200, 255)
+            btn.BackgroundColor3 = Color3.fromRGB(10, 14, 32)
+            btn.Size             = UDim2.new(0, 80, 0, 24)
+            btn.ZIndex           = 6
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+            local bs = Instance.new("UIStroke", btn)
+            bs.Color     = Color3.fromRGB(0, 80, 180)
+            bs.Thickness = 1
+            btn.MouseButton1Click:Connect(function()
+                local myChar  = LocalPlayer.Character
+                local myRoot  = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                local theirChar = p.Character
+                local theirRoot = theirChar and theirChar:FindFirstChild("HumanoidRootPart")
+                if myRoot and theirRoot then
+                    myRoot.CFrame = theirRoot.CFrame + Vector3.new(0, 3, 0)
+                end
+            end)
+            table.insert(tereptolButtons, btn)
+        end
+    end
+    local total = #tereptolButtons
+    local rows  = math.ceil(total / 3)
+    tereptolScroll.CanvasSize = UDim2.new(0, 0, 0, rows * 27)
+end
+
+RebuildTereptolButtons()
+Players.PlayerAdded:Connect(function()
+    task.wait(0.5)
+    RebuildTereptolButtons()
+end)
+Players.PlayerRemoving:Connect(function()
+    task.wait(0.1)
+    RebuildTereptolButtons()
+end)
+
+AddSlider(OtherPage, "SPEED", 16, 100, Settings.Other, "Speed")
+AddToggle(OtherPage, "NO RELOADING",  Settings.Other, "NoReloading")
+AddToggle(OtherPage, "ATTACK",        Settings.Other, "AttackSpeed")
+
 RunService.RenderStepped:Connect(function()
-    MainStroke.Color   = currentAutoColor
-    ToggleStroke.Color = currentAutoColor
+    MainStroke.Color            = currentAutoColor
+    ToggleStroke.Color          = currentAutoColor
     HeaderLine.BackgroundColor3 = currentAutoColor
     LogoGrad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, currentAutoColor),
