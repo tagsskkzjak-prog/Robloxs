@@ -12,11 +12,11 @@ local LocalPlayer      = Players.LocalPlayer
 local Camera           = game.Workspace.CurrentCamera
 
 local AutoColors = {
-    Color3.fromRGB(0,   210, 90),
-    Color3.fromRGB(0,   255, 140),
-    Color3.fromRGB(60,  220, 120),
-    Color3.fromRGB(120, 255, 80),
-    Color3.fromRGB(0,   180, 60),
+    Color3.fromRGB(0,   180, 255),
+    Color3.fromRGB(120, 0,   255),
+    Color3.fromRGB(255, 60,  180),
+    Color3.fromRGB(0,   255, 180),
+    Color3.fromRGB(255, 160, 0),
 }
 local autoColorIndex   = 1
 local autoColorTimer   = 0
