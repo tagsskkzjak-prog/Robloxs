@@ -1,7 +1,7 @@
 local Settings = {
     ESP = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
     Aim = { SilentAim = false, HitboxExpander = false, HitboxSize = 10 },
-    Other = { AttractPlayers = false, Fly = false, FlyHeight = 50, FlySpeed = 50 },
+    Other = { AttractPlayers = false, Fly = false, FlyHeight = 0, FlySpeed = 0 },
     CurrentTab = "ESP"
 }
 
@@ -887,11 +887,8 @@ flyKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 flyKnob.ZIndex           = 6
 Instance.new("UICorner", flyKnob).CornerRadius = UDim.new(1, 0)
 
-local flyHighCard  = nil
-local flySpeedCard = nil
-
-local function BuildFlySlider(page, name, minVal, maxVal, target, key, order)
-    local f = MakeCard(page, order)
+local function MakeFlySlider(order, name, key)
+    local f = MakeCard(OtherPage, order)
     f.Size = UDim2.new(1, -2, 0, 46)
     local ac = Instance.new("Frame", f)
     ac.Size             = UDim2.new(0, 3, 0, 18)
@@ -900,7 +897,7 @@ local function BuildFlySlider(page, name, minVal, maxVal, target, key, order)
     ac.ZIndex           = 5
     Instance.new("UICorner", ac).CornerRadius = UDim.new(1, 0)
     local lt = Instance.new("TextLabel", f)
-    lt.Text              = name .. ":  " .. target[key]
+    lt.Text              = name .. ":  0"
     lt.Size              = UDim2.new(1, -12, 0, 20)
     lt.Position          = UDim2.new(0, 12, 0, 4)
     lt.Font              = Enum.Font.GothamBold
@@ -916,8 +913,7 @@ local function BuildFlySlider(page, name, minVal, maxVal, target, key, order)
     trackBg.ZIndex           = 5
     Instance.new("UICorner", trackBg).CornerRadius = UDim.new(1, 0)
     local fill = Instance.new("Frame", trackBg)
-    local pct0 = (target[key] - minVal) / (maxVal - minVal)
-    fill.Size             = UDim2.new(pct0, 0, 1, 0)
+    fill.Size             = UDim2.new(0, 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
     fill.ZIndex           = 6
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
@@ -927,14 +923,14 @@ local function BuildFlySlider(page, name, minVal, maxVal, target, key, order)
     local knob = Instance.new("Frame", trackBg)
     knob.Size             = UDim2.new(0, 11, 0, 11)
     knob.AnchorPoint      = Vector2.new(0.5, 0.5)
-    knob.Position         = UDim2.new(pct0, 0, 0.5, 0)
+    knob.Position         = UDim2.new(0, 0, 0.5, 0)
     knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     knob.ZIndex           = 7
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
     local function Set(ip)
         local pct = math.clamp((ip.X - trackBg.AbsolutePosition.X) / trackBg.AbsoluteSize.X, 0, 1)
-        local val = math.floor(minVal + pct * (maxVal - minVal))
-        target[key]    = val
+        local val = math.floor(pct * 200)
+        Settings.Other[key] = val
         lt.Text        = name .. ":  " .. val
         fill.Size      = UDim2.new(pct, 0, 1, 0)
         knob.Position  = UDim2.new(pct, 0, 0.5, 0)
@@ -955,43 +951,31 @@ local function BuildFlySlider(page, name, minVal, maxVal, target, key, order)
             Set(i.Position)
         end
     end)
-    return f
 end
 
-local function RefreshFlyUI()
+MakeFlySlider(11, "FLY HIGH",    "FlyHeight")
+MakeFlySlider(12, "FAST FLIGHT", "FlySpeed")
+
+local function RefreshFlyToggle()
     local on = Settings.Other.Fly
     flyTrack.BackgroundColor3  = on and Color3.fromRGB(0, 100, 220) or Color3.fromRGB(22, 24, 40)
     flyKnob.Position           = on and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
     flyAccent.BackgroundColor3 = on and Color3.fromRGB(0, 180, 255) or Color3.fromRGB(40, 44, 70)
-    if on then
-        if not flyHighCard then
-            flyHighCard  = BuildFlySlider(OtherPage, "FLY HIGH",    10, 200, Settings.Other, "FlyHeight", 11)
-        end
-        if not flySpeedCard then
-            flySpeedCard = BuildFlySlider(OtherPage, "FAST FLIGHT", 10, 200, Settings.Other, "FlySpeed",  12)
-        end
-        if flyHighCard  then flyHighCard.Visible  = true end
-        if flySpeedCard then flySpeedCard.Visible = true end
-    else
-        if flyHighCard  then flyHighCard.Visible  = false end
-        if flySpeedCard then flySpeedCard.Visible = false end
-    end
 end
 
 flyTrack.InputBegan:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
         if Settings.Other.Fly then
             StopFly()
-            RefreshFlyUI()
         else
             StartFly()
-            RefreshFlyUI()
         end
+        RefreshFlyToggle()
     end
 end)
-RefreshFlyUI()
+RefreshFlyToggle()
 
-local tereptolHeader = MakeCard(OtherPage, 2)
+local tereptolHeader = MakeCard(OtherPage, 50)
 tereptolHeader.BackgroundColor3 = Color3.fromRGB(6, 8, 18)
 local tereptolAccent = Instance.new("Frame", tereptolHeader)
 tereptolAccent.Size             = UDim2.new(0, 3, 0, 18)
@@ -1010,7 +994,7 @@ tereptolTitle.BackgroundTransparency = 1
 tereptolTitle.TextXAlignment    = Enum.TextXAlignment.Left
 tereptolTitle.ZIndex            = 5
 
-local playerCardOrder = 3
+local playerCardOrder = 51
 local playerCards = {}
 
 local function RemovePlayerCard(player)
