@@ -457,7 +457,7 @@ local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size                   = UDim2.new(0, 420, 0, 320)
 MainFrame.Position               = UDim2.new(0.5, -210, 0.5, -160)
 MainFrame.BackgroundColor3       = G_BG
-MainFrame.BackgroundTransparency = 0.18
+MainFrame.BackgroundTransparency = 0.62
 MainFrame.Visible                = false
 MainFrame.Active                 = true
 MainFrame.Draggable              = true
@@ -478,7 +478,7 @@ BgGrad.Rotation = 135
 local Header = Instance.new("Frame", MainFrame)
 Header.Size                   = UDim2.new(1, 0, 0, 40)
 Header.BackgroundColor3       = Color3.fromRGB(5, 16, 8)
-Header.BackgroundTransparency = 0.12
+Header.BackgroundTransparency = 0.55
 Header.ZIndex                 = 3
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
 
@@ -549,15 +549,13 @@ CloseBtn.BackgroundTransparency = 0.3
 CloseBtn.ZIndex              = 5
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 7)
 
-local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size                   = UDim2.new(0, 48, 0, 48)
+local ToggleBtn = Instance.new("ImageButton", ScreenGui)
+ToggleBtn.Size                   = UDim2.new(0, 54, 0, 54)
 ToggleBtn.Position               = UDim2.new(0.88, 0, 0.12, 0)
-ToggleBtn.Text                   = "呵呵"
-ToggleBtn.Font                   = Enum.Font.GothamBold
-ToggleBtn.TextSize               = 10
-ToggleBtn.TextColor3             = G_GREEN
+ToggleBtn.Image                  = "rbxassetid://YOUR_IMAGE_ID_HERE"
+ToggleBtn.ScaleType              = Enum.ScaleType.Fit
 ToggleBtn.BackgroundColor3       = G_BG
-ToggleBtn.BackgroundTransparency = 0.15
+ToggleBtn.BackgroundTransparency = 0.25
 ToggleBtn.Active                 = true
 ToggleBtn.Draggable              = true
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
@@ -575,7 +573,7 @@ local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Size                   = UDim2.new(0, 90, 1, -46)
 Sidebar.Position               = UDim2.new(0, 5, 0, 42)
 Sidebar.BackgroundColor3       = Color3.fromRGB(4, 12, 6)
-Sidebar.BackgroundTransparency = 0.12
+Sidebar.BackgroundTransparency = 0.55
 Sidebar.ZIndex                 = 3
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
 
@@ -793,7 +791,7 @@ local function AddSlider(page, name, minVal, maxVal, target, key, order)
     FillGrad.Rotation = 0
 
     local Knob = Instance.new("Frame", TrackBg)
-    Knob.Size             = UDim2.new(0, 14, 0, 14)
+    Knob.Size             = UDim2.new(0, 18, 0, 18)
     Knob.AnchorPoint      = Vector2.new(0.5, 0.5)
     Knob.Position         = UDim2.new(pctInit, 0, 0.5, 0)
     Knob.BackgroundColor3 = Color3.fromRGB(240, 255, 245)
@@ -802,6 +800,13 @@ local function AddSlider(page, name, minVal, maxVal, target, key, order)
     local KnobStroke = Instance.new("UIStroke", Knob)
     KnobStroke.Color     = G_MID
     KnobStroke.Thickness = 1.5
+
+    local HitBox = Instance.new("TextButton", f)
+    HitBox.Size                   = UDim2.new(1, -18, 0, 36)
+    HitBox.Position               = UDim2.new(0, 9, 0, 14)
+    HitBox.BackgroundTransparency = 1
+    HitBox.Text                   = ""
+    HitBox.ZIndex                 = 8
 
     local function Set(ip)
         local pct = math.clamp((ip.X - TrackBg.AbsolutePosition.X) / TrackBg.AbsoluteSize.X, 0, 1)
@@ -812,6 +817,12 @@ local function AddSlider(page, name, minVal, maxVal, target, key, order)
         Knob.Position = UDim2.new(pct, 0, 0.5, 0)
     end
 
+    HitBox.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            _activeDragFn = Set
+            Set(i.Position)
+        end
+    end)
     TrackBg.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
             _activeDragFn = Set
@@ -940,7 +951,7 @@ local function MakeFlySlider(order, name, key)
     fg.Color    = ColorSequence.new({ ColorSequenceKeypoint.new(0, G_BRIGHT), ColorSequenceKeypoint.new(1, G_DARK) })
     fg.Rotation = 0
     local knob = Instance.new("Frame", trackBg)
-    knob.Size             = UDim2.new(0, 14, 0, 14)
+    knob.Size             = UDim2.new(0, 18, 0, 18)
     knob.AnchorPoint      = Vector2.new(0.5, 0.5)
     knob.Position         = UDim2.new(0, 0, 0.5, 0)
     knob.BackgroundColor3 = Color3.fromRGB(240, 255, 245)
@@ -949,6 +960,12 @@ local function MakeFlySlider(order, name, key)
     local ks = Instance.new("UIStroke", knob)
     ks.Color     = G_MID
     ks.Thickness = 1.5
+    local hitbox = Instance.new("TextButton", f)
+    hitbox.Size                   = UDim2.new(1, -18, 0, 36)
+    hitbox.Position               = UDim2.new(0, 9, 0, 14)
+    hitbox.BackgroundTransparency = 1
+    hitbox.Text                   = ""
+    hitbox.ZIndex                 = 8
     local function Set(ip)
         local pct = math.clamp((ip.X - trackBg.AbsolutePosition.X) / trackBg.AbsoluteSize.X, 0, 1)
         local val = math.floor(pct * 200)
@@ -957,6 +974,12 @@ local function MakeFlySlider(order, name, key)
         fill.Size      = UDim2.new(pct, 0, 1, 0)
         knob.Position  = UDim2.new(pct, 0, 0.5, 0)
     end
+    hitbox.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            _activeDragFn = Set
+            Set(i.Position)
+        end
+    end)
     trackBg.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
             _activeDragFn = Set
