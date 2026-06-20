@@ -1,7 +1,7 @@
 local Settings = {
     ESP = { Enabled = true, Skeleton = true, Box = true, Line = true, Name = true, Health = true, Thickness = 0.6, LinePos = "TOP" },
     Aim = { SilentAim = false, HitboxExpander = false, HitboxSize = 10 },
-    Other = { AttractPlayers = false, Speed = 16, NoReloading = false, AttackSpeed = false },
+    Other = { AttractPlayers = false },
     CurrentTab = "ESP"
 }
 
@@ -69,6 +69,101 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
+end)
+
+local attractBodyVelocities = {}
+
+local function SetupAttract(player)
+    if not player.Character then return end
+    local root = player.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    pcall(function()
+        local bv = root:FindFirstChild("_AttractBV")
+        if not bv then
+            bv = Instance.new("BodyVelocity")
+            bv.Name         = "_AttractBV"
+            bv.MaxForce     = Vector3.new(1e9, 1e9, 1e9)
+            bv.Velocity     = Vector3.new(0, 0, 0)
+            bv.P            = 1e9
+            bv.Parent       = root
+        end
+        attractBodyVelocities[player] = bv
+    end)
+end
+
+local function CleanAttract(player)
+    pcall(function()
+        if attractBodyVelocities[player] then
+            attractBodyVelocities[player]:Destroy()
+            attractBodyVelocities[player] = nil
+        end
+        if player.Character then
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local bv = root:FindFirstChild("_AttractBV")
+                if bv then bv:Destroy() end
+            end
+        end
+    end)
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    if not Settings.Other.AttractPlayers then
+        for p, _ in pairs(attractBodyVelocities) do
+            CleanAttract(p)
+        end
+        return
+    end
+
+    local myChar = LocalPlayer.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local char = p.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum  = char and char:FindFirstChildWhichIsA("Humanoid")
+            if root and hum and hum.Health > 0 then
+                local diff = myRoot.Position - root.Position
+                local dist = diff.Magnitude
+
+                if dist > 2 then
+                    local dir    = diff.Unit
+                    local speed  = math.clamp(dist * 8, 20, 120)
+
+                    pcall(function()
+                        local bv = root:FindFirstChild("_AttractBV")
+                        if not bv then
+                            bv          = Instance.new("BodyVelocity")
+                            bv.Name     = "_AttractBV"
+                            bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                            bv.P        = 1e9
+                            bv.Parent   = root
+                            attractBodyVelocities[p] = bv
+                        end
+                        bv.Velocity = dir * speed
+                    end)
+
+                    pcall(function()
+                        root.CFrame = root.CFrame:Lerp(
+                            CFrame.new(myRoot.Position + dir * -2, myRoot.Position),
+                            math.min(dt * 6, 1)
+                        )
+                    end)
+                else
+                    pcall(function()
+                        local bv = root:FindFirstChild("_AttractBV")
+                        if bv then bv.Velocity = Vector3.new(0, 0, 0) end
+                    end)
+                end
+            end
+        end
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    CleanAttract(p)
 end)
 
 local espConnections = {}
@@ -270,86 +365,6 @@ Players.PlayerRemoving:Connect(function(p)
     DestroyESP(p)
 end)
 
-RunService.RenderStepped:Connect(function()
-    if Settings.Other.AttractPlayers then
-        local myChar = LocalPlayer.Character
-        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        if myRoot then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    local theirRoot = p.Character:FindFirstChild("HumanoidRootPart")
-                    if theirRoot then
-                        local dir = (myRoot.Position - theirRoot.Position)
-                        if dir.Magnitude > 3 then
-                            theirRoot.CFrame = theirRoot.CFrame + dir.Unit * 2
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    if Settings.Other.NoReloading then
-        local myChar = LocalPlayer.Character
-        if myChar then
-            for _, tool in pairs(myChar:GetChildren()) do
-                if tool:IsA("Tool") then
-                    pcall(function()
-                        for _, v in pairs(tool:GetDescendants()) do
-                            if v:IsA("NumberValue") or v:IsA("IntValue") then
-                                local n = v.Name:lower()
-                                if n:find("reload") or n:find("star") or n:find("ammo") or n:find("mult") then
-                                    v.Value = 999
-                                end
-                            end
-                        end
-                    end)
-                end
-            end
-            for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
-                if item:IsA("Tool") then
-                    pcall(function()
-                        for _, v in pairs(item:GetDescendants()) do
-                            if v:IsA("NumberValue") or v:IsA("IntValue") then
-                                local n = v.Name:lower()
-                                if n:find("reload") or n:find("star") or n:find("ammo") or n:find("mult") then
-                                    v.Value = 999
-                                end
-                            end
-                        end
-                    end)
-                end
-            end
-        end
-    end
-
-    if Settings.Other.AttackSpeed then
-        local myChar = LocalPlayer.Character
-        if myChar then
-            for _, tool in pairs(myChar:GetChildren()) do
-                if tool:IsA("Tool") then
-                    pcall(function()
-                        for _, v in pairs(tool:GetDescendants()) do
-                            if v:IsA("NumberValue") or v:IsA("IntValue") then
-                                local n = v.Name:lower()
-                                if n:find("firerate") or n:find("attackspeed") or n:find("cooldown") or n:find("delay") or n:find("rate") then
-                                    v.Value = 0.01
-                                end
-                            end
-                        end
-                    end)
-                end
-            end
-        end
-    end
-
-    local myChar = LocalPlayer.Character
-    local myHum  = myChar and myChar:FindFirstChildWhichIsA("Humanoid")
-    if myHum then
-        myHum.WalkSpeed = Settings.Other.Speed
-    end
-end)
-
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name         = "呵呵"
 ScreenGui.ResetOnSpawn = false
@@ -427,7 +442,7 @@ Title.TextYAlignment   = Enum.TextYAlignment.Center
 Title.ZIndex           = 4
 
 local SubTitle = Instance.new("TextLabel", Header)
-SubTitle.Text             = "v3.3"
+SubTitle.Text             = "v3.4"
 SubTitle.Size             = UDim2.new(0, 40, 1, 0)
 SubTitle.Position         = UDim2.new(0, 108, 0, 0)
 SubTitle.TextColor3       = Color3.fromRGB(50, 70, 130)
@@ -520,12 +535,12 @@ local function CreatePage(tabName)
     pad.PaddingTop   = UDim.new(0, 4)
     pad.PaddingRight = UDim.new(0, 6)
     Pages[tabName] = page
-    return page, layout
+    return page
 end
 
-local EspPage,   _ = CreatePage("ESP")
-local AimPage,   _ = CreatePage("AIM")
-local OtherPage, _ = CreatePage("OTHER")
+local EspPage   = CreatePage("ESP")
+local AimPage   = CreatePage("AIM")
+local OtherPage = CreatePage("OTHER")
 
 local TabButtons = {}
 local function SwitchTab(tabName)
@@ -578,7 +593,7 @@ local function MakeCard(page, order)
     f.BackgroundColor3       = Color3.fromRGB(10, 12, 23)
     f.BackgroundTransparency = 0
     f.ZIndex                 = 4
-    f.LayoutOrder             = order or 0
+    f.LayoutOrder            = order or 0
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", f)
     s.Color     = Color3.fromRGB(18, 22, 42)
@@ -770,11 +785,8 @@ AddToggle(AimPage,  "HITBOX EXPANDER", Settings.Aim, "HitboxExpander", 2)
 AddSlider(AimPage,  "HITBOX SIZE",     1, 30, Settings.Aim, "HitboxSize", 3)
 
 AddToggle(OtherPage, "ATTRACT PLAYERS", Settings.Other, "AttractPlayers", 1)
-AddSlider(OtherPage, "SPEED",           16, 100, Settings.Other, "Speed",        2)
-AddToggle(OtherPage, "NO RELOADING",    Settings.Other, "NoReloading",   3)
-AddToggle(OtherPage, "ATTACK",          Settings.Other, "AttackSpeed",   4)
 
-local tereptolHeader = MakeCard(OtherPage, 5)
+local tereptolHeader = MakeCard(OtherPage, 2)
 tereptolHeader.BackgroundColor3 = Color3.fromRGB(6, 8, 18)
 local tereptolAccent = Instance.new("Frame", tereptolHeader)
 tereptolAccent.Size             = UDim2.new(0, 3, 0, 18)
@@ -793,7 +805,7 @@ tereptolTitle.BackgroundTransparency = 1
 tereptolTitle.TextXAlignment    = Enum.TextXAlignment.Left
 tereptolTitle.ZIndex            = 5
 
-local playerCardOrder = 10
+local playerCardOrder = 3
 local playerCards = {}
 
 local function RemovePlayerCard(player)
@@ -810,8 +822,8 @@ local function AddPlayerCard(player)
     f.BackgroundColor3       = Color3.fromRGB(8, 11, 22)
     f.BackgroundTransparency = 0
     f.ZIndex                 = 4
-    f.LayoutOrder             = playerCardOrder
-    playerCardOrder           = playerCardOrder + 1
+    f.LayoutOrder            = playerCardOrder
+    playerCardOrder          = playerCardOrder + 1
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", f)
     s.Color     = Color3.fromRGB(0, 60, 140)
